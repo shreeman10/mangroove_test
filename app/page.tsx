@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation";
+import { RainbowButton } from "@/components/ui/rainbow-button"
 import {
   Select,
   SelectContent,
@@ -31,12 +32,18 @@ export default function Home() {
   </SelectContent>
 </Select>
     </div>
-    <button className="bg-gray-500 w-24 rounded-2xl text-2xl"
+    <RainbowButton
+    className="w-fit"
+    onClick={()=>router.push(`/demo?year=${year}`)
+      }
+    >Get Map</RainbowButton>
+
+    {/* <button className="bg-gray-500 w-24 rounded-2xl text-2xl"
     onClick={()=>router.push(`/demo?year=${year}`)
       }
     >
       Demo
-    </button>
+    </button> */}
     </div>
     
   );

@@ -12,7 +12,7 @@ type ImageryResponse = {
 
 const DemoPage = () => {
     const params = useSearchParams()
-    const year = params.get("year") || "2024"
+    const year = params.get("year") || "2026"
     const region = "thane-creek"
 
     const imagery = useQuery<ImageryResponse>({
