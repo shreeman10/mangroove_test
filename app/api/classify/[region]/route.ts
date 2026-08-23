@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getStudyArea } from "@/lib/area"
 import { getEE } from "@/lib/gee"
-import { classifyMangroves } from "@/lib/mangroveClassifier"
+import { classifyMangroves, computeStats } from "@/lib/mangroveClassifier"
 
 type Props = {
   params: Promise<{ region: string }>
@@ -26,17 +26,22 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     const geometry = ee.Geometry.Rectangle(studyArea.bbox)
 
-    const { classifiedImage, debug } = await classifyMangroves(ee, geometry, year)
+    const { classifiedImage, augmentedImage, debug } = await classifyMangroves(ee, geometry, year)
 
-    // In the image - 0 = non-mangrove-dark part, 1 = mangrove-the greenish thing
+    // Numerical stats: hectares per class, NDVI health index, band means.
+    // Computed from the same classified image — no extra RF training run.
+    const stats = await computeStats(ee, classifiedImage, augmentedImage, geometry)
+
+    // Classification values: 0 = non-mangrove, 1 = degraded mangrove,
+    // 2 = healthy mangrove → dark / amber / emerald palette.
     const url: string = await new Promise((resolve, reject) => {
       classifiedImage.getThumbURL(
         {
           region: geometry,
           dimensions: 1024,
           min: 0,
-          max: 1,
-          palette: ["#111827", "#10B981"],
+          max: 2,
+          palette: ["#111827", "#FBBF24", "#10B981"],
           format: "png",
         },
         (thumbUrl: string, err: string) => {
@@ -53,6 +58,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       url,
       region,
       name: studyArea.name,
+      year,
+      stats,
       debug,
     })
   } catch (error) {

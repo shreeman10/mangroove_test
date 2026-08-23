@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getStudyArea } from "@/lib/area"
-import { getEE } from "@/lib/gee"
+import { getEE, evaluate } from "@/lib/gee"
 
 type Props = {
   params: Promise<{ region: string }>
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   const { region } = await params
 
   const queryParams = request.nextUrl.searchParams
-  const year = queryParams.get("year")
+  const year = queryParams.get("year") || "2024"
 
   try {
     const studyArea = getStudyArea(region)
@@ -35,19 +35,14 @@ export async function GET(request: NextRequest, { params }: Props) {
       .sort("CLOUDY_PIXEL_PERCENTAGE")
 
     // Check if collection is empty
-    const count: number = await new Promise((resolve, reject) => {
-      collection.size().evaluate(
-        (val: number) => resolve(val),
-        (err: string) => reject(new Error("Failed to count images: " + err))
-      )
-    })
+    const count: number = await evaluate(collection.size())
 
     if (count === 0) {
       return NextResponse.json(
         {
           error: "No images found for this region and date range",
           region,
-          dateRange: "2024-01-01 to 2024-03-31",
+          dateRange: `${year}-01-01 to ${year}-03-31`,
         },
         { status: 404 }
       )

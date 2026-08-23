@@ -13,7 +13,7 @@ function loadPrivateKey() {
   if (!keyPath) {
     throw new Error("GEE_SERVICE_ACCOUNT_KEY_PATH is not set in env")
   }
-  const resolvedPath = path.resolve(process.cwd(), keyPath)
+  const resolvedPath = path.resolve(/* turbopackIgnore: true */ process.cwd(), keyPath)
   const raw = fs.readFileSync(resolvedPath, "utf-8")
   return JSON.parse(raw)
 }
@@ -53,4 +53,15 @@ export function getEE(): Promise<typeof ee> {
   })
 
   return initPromise.then(() => ee)
+}
+
+// Wrap EE's callback-style .evaluate() into a Promise
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function evaluate<T = any>(eeObject: any): Promise<T> {
+  return new Promise((resolve, reject) => {
+    eeObject.evaluate(
+      (value: T) => resolve(value),
+      (err: string) => reject(new Error(String(err)))
+    )
+  })
 }

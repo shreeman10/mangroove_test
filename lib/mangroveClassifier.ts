@@ -1,5 +1,7 @@
 
 // lib/mangroveClassifier.ts
+import { evaluate } from "@/lib/gee"
+
 // Mangrove classification using Random Forest trained on
 // GMW v3 (2020) reference labels + Sentinel-2 spectral data.
 //
@@ -24,9 +26,31 @@ const CLASSIFICATION_BANDS = ["B2", "B3", "B4", "B8", "B11", "NDVI", "MNDWI"]
 // Class property name used throughout the pipeline
 const CLASS_PROPERTY = "mangrove"
 
+// ─── Multi-class health detection ────────────────────────────────────
+// The binary RF output (0/1) is split into 3 classes using NDVI:
+//   0 = non-mangrove, 1 = degraded mangrove, 2 = healthy mangrove
+export const HEALTHY_NDVI_THRESHOLD = 0.5
+
+export type MangroveClass = 0 | 1 | 2
+
+export type MangroveStats = {
+  // Area in hectares: pixel count × (10m × 10m) / 10,000
+  totalHectares: number
+  healthyHectares: number
+  degradedHectares: number
+  pixelCounts: { nonMangrove: number; degraded: number; healthy: number }
+  // Mean NDVI inside mangrove pixels → drives the health gauge
+  mangroveMeanNdvi: number
+  // Mean spectral values over the whole study area (spectral table)
+  bandMeans: Record<string, number>
+}
+
 export type ClassifyResult = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   classifiedImage: any
+  // Sentinel-2 composite with the 7 feature bands (for stats computation)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  augmentedImage: any
   debug: {
     totalTrainingPoints: number
     s2ImageCount: number
@@ -169,20 +193,106 @@ export async function classifyMangroves(
   // ── 8. Post-processing: majority filter to reduce speckle noise ──
   // focalMode replaces each pixel with the mode of its circular
   // neighbourhood, cleaning up isolated misclassified pixels.
-  // Output is still a single-band ee.Image (band name becomes
-  // 'classification_mode' but getThumbURL with min/max/palette
-  // applies to the first band regardless of name).
   const smoothed = classified.focalMode({
     radius: 1.5,
     kernelType: "circle",
     units: "pixels",
   })
 
+  // ── 9. Multi-class health split (binary → 3 classes via NDVI) ─────
+  // Within RF-detected mangrove pixels, healthy canopy shows higher NDVI
+  // than degraded/sparse stands. Pixels >= HEALTHY_NDVI_THRESHOLD → 2,
+  // remaining mangrove pixels → 1 (degraded), everything else stays 0.
+  const ndviBand = augmentedImage.select("NDVI")
+  const threeClass = smoothed.where(
+    smoothed.eq(1).and(ndviBand.gte(HEALTHY_NDVI_THRESHOLD)),
+    2
+  ).rename("classification")
+
   return {
-    classifiedImage: smoothed,
+    classifiedImage: threeClass,
+    augmentedImage,
     debug: {
       totalTrainingPoints: pointCount,
       s2ImageCount: imageCount,
     },
+  }
+}
+
+/**
+ * Computes numerical statistics from an already-classified image:
+ * area per class (hectares from 10m pixels), mean NDVI over mangroves
+ * (health gauge) and mean band values over the study area (spectral table).
+ */
+export async function computeStats(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ee: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  classifiedImage: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  augmentedImage: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  geometry: any
+): Promise<MangroveStats> {
+  // Pixel count per class value (histogram over the classification band)
+  const counts = await evaluate<Record<string, Record<string, number>>>(
+    classifiedImage.reduceRegion({
+      reducer: ee.Reducer.frequencyHistogram(),
+      geometry,
+      scale: 10, // 10m × 10m pixels
+      maxPixels: 1e13,
+    })
+  )
+
+  // Mean of every feature band over the whole study area
+  const means = await evaluate<Record<string, number>>(
+    augmentedImage.reduceRegion({
+      reducer: ee.Reducer.mean(),
+      geometry,
+      scale: 10,
+      maxPixels: 1e13,
+    })
+  )
+
+  // Mean NDVI restricted to detected mangrove pixels (class > 0)
+  const mangroveNdvi = await evaluate<Record<string, number>>(
+    augmentedImage
+      .select("NDVI")
+      .updateMask(classifiedImage.gt(0))
+      .reduceRegion({
+        reducer: ee.Reducer.mean(),
+        geometry,
+        scale: 10,
+        maxPixels: 1e13,
+      })
+  )
+
+  // Histogram keys come back as strings ("0" | "1" | "2")
+  const hist = Object.values(counts)[0] ?? {}
+  const countOf = (cls: number) => Number(hist[String(cls)] ?? 0)
+
+  const healthyPx = countOf(2)
+  const degradedPx = countOf(1)
+  const nonMangrovePx = countOf(0)
+
+  // hectares = pixels × (10m × 10m = 100 m²) ÷ 10,000 m²/ha
+  const hectares = (pixels: number) => (pixels * 100) / 10000
+
+  const bandMeans: Record<string, number> = {}
+  for (const band of [...CLASSIFICATION_BANDS]) {
+    bandMeans[band] = Number(means[band] ?? 0)
+  }
+
+  return {
+    totalHectares: hectares(healthyPx + degradedPx),
+    healthyHectares: hectares(healthyPx),
+    degradedHectares: hectares(degradedPx),
+    pixelCounts: {
+      nonMangrove: nonMangrovePx,
+      degraded: degradedPx,
+      healthy: healthyPx,
+    },
+    mangroveMeanNdvi: Number(mangroveNdvi.NDVI ?? 0),
+    bandMeans,
   }
 }
