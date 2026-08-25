@@ -1,36 +1,118 @@
 "use client"
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useRef, type ReactNode } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Box } from "lucide-react"
 
-const SPOTLIGHT_R = 350
+const SPOTLIGHT_R = 180
 
-function RevealLayer({
-  cursorX,
-  cursorY,
-}: {
-  cursorX: number
-  cursorY: number
-}) {
-  const maskImage = `radial-gradient(circle ${SPOTLIGHT_R}px at ${cursorX}px ${cursorY}px, black 0%, transparent 100%)`
+function SpotlightBackground({ children }: { children: ReactNode }) {
+  const mouse = useRef({ x: -999, y: -999 })
+  const smooth = useRef({ x: -999, y: -999 })
+  const lastDrawn = useRef({ x: -99999, y: -99999 })
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const revealRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const reveal = revealRef.current
+    const ctx = canvas?.getContext("2d")
+    if (!canvas || !ctx || !reveal) return
+
+    const resize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+      lastDrawn.current = { x: -99999, y: -99999 }
+    }
+
+    const draw = () => {
+      const cx = smooth.current.x
+      const cy = smooth.current.y
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      const points = 48
+      ctx.beginPath()
+      for (let i = 0; i <= points; i++) {
+        const a = (i / points) * Math.PI * 2
+        const wobble =
+          1 +
+          0.1 * Math.sin(a * 3 + 1.7) +
+          0.06 * Math.sin(a * 5 + 4.2) +
+          0.04 * Math.sin(a * 8 + 0.6)
+        const r = SPOTLIGHT_R * wobble
+        const x = cx + Math.cos(a) * r
+        const y = cy + Math.sin(a) * r * 0.92
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
+      ctx.closePath()
+
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, SPOTLIGHT_R * 1.2)
+      gradient.addColorStop(0, "rgba(255,255,255,1)")
+      gradient.addColorStop(0.33, "rgba(255,255,255,1)")
+      gradient.addColorStop(0.5, "rgba(255,255,255,0.75)")
+      gradient.addColorStop(0.62, "rgba(255,255,255,0.4)")
+      gradient.addColorStop(0.73, "rgba(255,255,255,0.12)")
+      gradient.addColorStop(0.83, "rgba(255,255,255,0)")
+      ctx.fillStyle = gradient
+      ctx.fill()
+
+      const url = canvas.toDataURL()
+      reveal.style.setProperty("mask-image", `url(${url})`)
+      reveal.style.setProperty("-webkit-mask-image", `url(${url})`)
+    }
+
+    const onMouseMove = (e: MouseEvent) => {
+      mouse.current.x = e.clientX
+      mouse.current.y = e.clientY
+    }
+    window.addEventListener("mousemove", onMouseMove)
+
+    resize()
+    window.addEventListener("resize", resize)
+    draw()
+
+    let rafId = requestAnimationFrame(function animate() {
+      smooth.current.x += (mouse.current.x - smooth.current.x) * 0.1
+      smooth.current.y += (mouse.current.y - smooth.current.y) * 0.1
+
+      const moved =
+        Math.abs(smooth.current.x - lastDrawn.current.x) > 0.5 ||
+        Math.abs(smooth.current.y - lastDrawn.current.y) > 0.5
+
+      if (moved) {
+        lastDrawn.current = { x: smooth.current.x, y: smooth.current.y }
+        draw()
+      }
+
+      rafId = requestAnimationFrame(animate)
+    })
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove)
+      window.removeEventListener("resize", resize)
+      cancelAnimationFrame(rafId)
+    }
+  }, [])
 
   return (
-    <div className="absolute inset-0">
+    <div className="relative w-full h-screen overflow-hidden bg-[#0d1117]">
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+
       <div
-        className="absolute inset-0 z-10 bg-center bg-cover bg-no-repeat blur-[4px] opacity-40 grayscale-[30%]"
+        className="absolute inset-0 bg-center bg-cover bg-no-repeat z-10"
         style={{ backgroundImage: "url('/hero/bg-1.png')" }}
       />
       <div
-        className="absolute inset-0 z-20 bg-center bg-cover bg-no-repeat pointer-events-none brightness-125 saturate-[2.5] contrast-125"
-        style={{
-          backgroundImage: "url('/hero/bg-1.png')",
-          maskImage,
-          WebkitMaskImage: maskImage,
-        }}
+        ref={revealRef}
+        className="absolute inset-0 bg-center bg-cover bg-no-repeat z-20 pointer-events-none"
+        style={{ backgroundImage: "url('/hero/bg-2.png')" }}
       />
-      <div className="absolute inset-0 z-30 bg-[#0d1117]/50 pointer-events-none" />
+      <div className="absolute inset-0 bg-[#0d1117]/60 z-30 pointer-events-none" />
+
+      <div className="relative z-40 w-full h-full">{children}</div>
     </div>
   )
 }
@@ -52,38 +134,12 @@ function Word({
 }
 
 export default function LandingPage() {
-  const mouse = useRef({ x: -9999, y: -9999 })
-  const smooth = useRef({ x: -9999, y: -9999 })
-  const [cursorPos, setCursorPos] = useState({ x: -9999, y: -9999 })
-
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      mouse.current.x = e.clientX
-      mouse.current.y = e.clientY
-    }
-    window.addEventListener("mousemove", onMouseMove)
-
-    let rafId = requestAnimationFrame(function animate() {
-      smooth.current.x += (mouse.current.x - smooth.current.x) * 0.1
-      smooth.current.y += (mouse.current.y - smooth.current.y) * 0.1
-      setCursorPos({ x: smooth.current.x, y: smooth.current.y })
-      rafId = requestAnimationFrame(animate)
-    })
-
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove)
-      cancelAnimationFrame(rafId)
-    }
-  }, [])
-
   return (
     <div
       className="min-h-screen tracking-[-0.02em] bg-black"
       style={{ fontFamily: "'Inter', sans-serif" }}
     >
-      <section className="relative w-full overflow-hidden bg-[#0d1117] h-screen">
-        <RevealLayer cursorX={cursorPos.x} cursorY={cursorPos.y} />
-
+      <SpotlightBackground>
         <nav className="absolute top-0 left-0 right-0 z-[100] flex items-center justify-between px-6 py-5">
           <div className="flex items-center gap-2">
             <Box className="text-[#10b981] w-6 h-6" />
@@ -167,7 +223,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </SpotlightBackground>
     </div>
   )
 }
