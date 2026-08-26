@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type CSSProperties } from "react"
 import {
   AlertTriangle,
   Layers,
@@ -42,24 +42,90 @@ type MapPanelProps = {
   error: string | null
 }
 
+// GEE thumbnails can take many seconds to render server-side. Keep the last
+// loaded frame visible under a spinner overlay and only swap once the new
+// URL has fully downloaded — otherwise the pane looks frozen on old imagery.
+function GeeImage({
+  src,
+  alt,
+  className,
+  style,
+  wrapperClassName,
+  pendingLabel = "Rendering…",
+}: {
+  src?: string
+  alt: string
+  className?: string
+  style?: CSSProperties
+  wrapperClassName?: string
+  pendingLabel?: string
+}) {
+  const [displayed, setDisplayed] = useState<string | undefined>(src)
+  const [pending, setPending] = useState(false)
+
+  useEffect(() => {
+    if (!src) {
+      setDisplayed(undefined)
+      setPending(false)
+      return
+    }
+    if (src === displayed) return
+    setPending(true)
+    let cancelled = false
+    const img = new Image()
+    img.onload = () => {
+      if (cancelled) return
+      setDisplayed(src)
+      setPending(false)
+    }
+    img.onerror = () => {
+      if (cancelled) return
+      setPending(false)
+    }
+    img.src = src
+    return () => {
+      cancelled = true
+    }
+  }, [src, displayed])
+
+  return (
+    <div className={cn("relative h-full w-full", wrapperClassName)}>
+      {displayed && (
+        // Google Earth Engine thumbnail URLs — plain img, no next/image domain config needed
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={displayed} alt={alt} className={className} style={style} />
+      )}
+      {pending && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-background/60 backdrop-blur-sm">
+          <Loader2 className="size-6 animate-spin text-primary" />
+          <p className="text-xs text-muted-foreground">{pendingLabel}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ImagePane({
   src,
   alt,
   label,
+  pendingLabel,
 }: {
   src?: string
   alt: string
   label?: string
+  pendingLabel?: string
 }) {
   return (
     <figure className="relative h-full w-full overflow-hidden bg-black/40">
-      {src && (
-        // Google Earth Engine thumbnail URLs — plain img, no next/image domain config needed
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={alt} className="h-full w-full object-contain" />
-      )}
+      <GeeImage
+        src={src}
+        alt={alt}
+        className="h-full w-full object-contain"
+        pendingLabel={pendingLabel}
+      />
       {label && (
-        <figcaption className="absolute top-2 left-2 rounded-md border bg-background/80 px-2 py-0.5 text-[11px] text-muted-foreground backdrop-blur">
+        <figcaption className="absolute top-2 left-2 z-20 rounded-md border bg-background/80 px-2 py-0.5 text-[11px] text-muted-foreground backdrop-blur">
           {label}
         </figcaption>
       )}
@@ -161,7 +227,7 @@ export function MapPanel({
           <>
             {fetching && !loading && (
               <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 rounded-md border bg-background/80 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur">
-                <Loader2 className="size-3 animate-spin" /> Updating…
+                <Loader2 className="size-3 animate-spin" /> Running analysis…
               </div>
             )}
 
@@ -171,33 +237,32 @@ export function MapPanel({
                   src={imageryUrl}
                   alt={`Sentinel-2 true color ${regionName}`}
                   label="Sentinel-2 RGB"
+                  pendingLabel="Rendering RGB…"
                 />
                 <ImagePane
                   src={maskUrl}
                   alt="AI mangrove classification"
                   label="AI Classification"
+                  pendingLabel="Rendering classification…"
                 />
               </div>
             ) : view === "overlay" ? (
               <figure className="relative h-full w-full bg-black/40">
-                {imageryUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={imageryUrl}
-                    alt={`Sentinel-2 true color ${regionName}`}
-                    className="h-full w-full object-contain"
-                  />
-                )}
-                {maskUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={maskUrl}
-                    alt="AI mangrove mask overlay"
-                    className="absolute inset-0 h-full w-full object-contain transition-opacity"
-                    style={{ opacity }}
-                  />
-                )}
-                <figcaption className="absolute top-2 left-2 rounded-md border bg-background/80 px-2 py-0.5 text-[11px] text-muted-foreground backdrop-blur">
+                <GeeImage
+                  src={imageryUrl}
+                  alt={`Sentinel-2 true color ${regionName}`}
+                  className="h-full w-full object-contain"
+                  pendingLabel="Rendering RGB…"
+                />
+                <GeeImage
+                  src={maskUrl}
+                  alt="AI mangrove mask overlay"
+                  className="h-full w-full object-contain transition-opacity"
+                  style={{ opacity }}
+                  wrapperClassName="absolute inset-0"
+                  pendingLabel="Rendering classification…"
+                />
+                <figcaption className="absolute top-2 left-2 z-20 rounded-md border bg-background/80 px-2 py-0.5 text-[11px] text-muted-foreground backdrop-blur">
                   RGB + AI Mask overlay
                 </figcaption>
               </figure>
@@ -208,6 +273,9 @@ export function MapPanel({
                   view === "rgb"
                     ? `Sentinel-2 true color ${regionName}`
                     : "AI mangrove classification"
+                }
+                pendingLabel={
+                  view === "rgb" ? "Rendering RGB…" : "Rendering classification…"
                 }
               />
             )}

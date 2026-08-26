@@ -7,11 +7,23 @@ type Props = {
   params: Promise<{ region: string }>
 }
 
+// In-memory response cache (per server process): the ~40s RF pipeline for a
+// (region, year) pair runs once, then is reused across clients/navigations.
+const responseCache = new Map<string, unknown>()
+
 export async function GET(request: NextRequest, { params }: Props) {
   const { region } = await params
 
   const queryParams = request.nextUrl.searchParams
   const year = queryParams.get("year") || "2024"
+
+  const cacheKey = `${region}?year=${year}`
+  const cached = responseCache.get(cacheKey)
+  if (cached) {
+    return NextResponse.json(cached, {
+      headers: { "Cache-Control": "no-store" },
+    })
+  }
 
   try {
     const studyArea = getStudyArea(region)
@@ -54,13 +66,18 @@ export async function GET(request: NextRequest, { params }: Props) {
       )
     })
 
-    return NextResponse.json({
+    const payload = {
       url,
       region,
       name: studyArea.name,
       year,
       stats,
       debug,
+    }
+    responseCache.set(cacheKey, payload)
+
+    return NextResponse.json(payload, {
+      headers: { "Cache-Control": "no-store" },
     })
   } catch (error) {
     const message =
@@ -68,7 +85,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     console.error(`[/api/classify/${region}] Error:`, error)
     return NextResponse.json(
       { error: message, region },
-      { status: 500 }
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     )
   }
 }
