@@ -189,3 +189,146 @@
   -webkit-text-fill-color: transparent;
   animation: shimmer 4s linear infinite;
 }
+
+/* ─── Print Stylesheet ─── Executive Report Format ──────────────────── */
+@media print {
+  /* Reset the dark theme to white for paper */
+  html, body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Override dark theme CSS variables for print */
+  .dark {
+    --background: oklch(1 0 0) !important;
+    --foreground: oklch(0.1 0 0) !important;
+    --card: oklch(1 0 0) !important;
+    --card-foreground: oklch(0.1 0 0) !important;
+    --muted-foreground: oklch(0.35 0 0) !important;
+    --border: oklch(0.8 0 0) !important;
+    --primary: oklch(0.35 0.12 163) !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: A4 landscape;
+    margin: 1.5cm;
+  }
+
+  /* Remove scrollbars and overflow constraints */
+  * {
+    overflow: visible !important;
+  }
+
+  /* Hide interactive elements that don't belong on paper */
+  .print\:hidden,
+  [data-slot="tabs-list"],
+  [data-slot="slider"],
+  [aria-label="Play timeline"],
+  [aria-label="Pause timeline"] {
+    display: none !important;
+  }
+
+  /* Main container: remove dark bg, padding, flex constraints */
+  body > div,
+  body > div > div {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* Header: clean line, white bg */
+  header {
+    background: white !important;
+    border: none !important;
+    border-bottom: 2px solid #10b981 !important;
+    border-radius: 0 !important;
+    padding: 0.5cm 0 !important;
+    margin-bottom: 0.5cm !important;
+  }
+
+  header span,
+  header [data-slot="button"] {
+    color: black !important;
+    -webkit-text-fill-color: black !important;
+  }
+
+  /* Map panel: full width, fixed height for the page */
+  main {
+    display: block !important;
+    height: auto !important;
+  }
+
+  main > div:first-child {
+    width: 100% !important;
+    height: 14cm !important;
+  }
+
+  /* Cards: white bg, thin border */
+  [data-slot="card"] {
+    background: white !important;
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  [data-slot="card-content"],
+  [data-slot="card-header"],
+  [data-slot="card-title"],
+  [data-slot="card-description"] {
+    color: black !important;
+  }
+
+  /* Invert all text to black for paper readability */
+  p, span, div, td, th, h1, h2, h3, h4, h5, h6, figcaption, label {
+    color: black !important;
+    -webkit-text-fill-color: black !important;
+  }
+
+  /* Preserve colored badges for context */
+  [data-slot="badge"] {
+    border: 1px solid #ccc !important;
+    background: #f5f5f5 !important;
+    color: black !important;
+    -webkit-text-fill-color: black !important;
+  }
+
+  /* Table styling for print */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  table td, table th {
+    border-bottom: 1px solid #ddd !important;
+    padding: 4px 8px !important;
+    color: black !important;
+  }
+
+  /* Ensure images print with color */
+  img {
+    max-width: 100% !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide the timeline scrubber bar on the map */
+  [data-slot="card"] .absolute.bottom-3 {
+    display: none !important;
+  }
+
+  /* SVG text in gauges — black for readability */
+  svg text {
+    fill: black !important;
+  }
+
+  /* Font mono elements — keep contrast */
+  .font-mono {
+    color: #333 !important;
+    -webkit-text-fill-color: #333 !important;
+  }
+}

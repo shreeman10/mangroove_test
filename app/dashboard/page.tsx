@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
-import { FileDown, Satellite } from "lucide-react"
+import { BarChart3, FileDown, FileSpreadsheet, Satellite } from "lucide-react"
 
 import { MapPanel } from "@/components/dashboard/map-panel"
 import { StatsPanel } from "@/components/dashboard/stats-panel"
+import { TimeSeriesDrawer } from "@/components/dashboard/time-series-drawer"
+import { RegionCompareModal } from "@/components/dashboard/region-compare-modal"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -56,10 +58,74 @@ export async function fetchClassify(
   return data
 }
 
+// ─── CSV Export ─────────────────────────────────────────────────────────
+function generateCSV(
+  region: string,
+  queryClient: ReturnType<typeof useQueryClient>
+): string {
+  const headers = [
+    "Year",
+    "Total Area (ha)",
+    "Healthy Area (ha)",
+    "Degraded Area (ha)",
+    "NDVI",
+    "MNDWI",
+    "B2 (Blue)",
+    "B3 (Green)",
+    "B4 (Red)",
+    "B8 (NIR)",
+    "B11 (SWIR)",
+  ]
+
+  const rows: string[][] = [headers]
+
+  for (const y of TIMELINE_YEARS) {
+    const cached = queryClient.getQueryData<ClassifyResponse>([
+      "classify",
+      region,
+      y,
+    ])
+    const stats = cached?.stats
+    if (!stats) {
+      rows.push([y, ...Array(headers.length - 1).fill("")])
+      continue
+    }
+
+    rows.push([
+      y,
+      stats.totalHectares.toFixed(1),
+      stats.healthyHectares.toFixed(1),
+      stats.degradedHectares.toFixed(1),
+      stats.mangroveMeanNdvi.toFixed(4),
+      (stats.bandMeans["MNDWI"] ?? "").toString(),
+      (stats.bandMeans["B2"] ?? "").toString(),
+      (stats.bandMeans["B3"] ?? "").toString(),
+      (stats.bandMeans["B4"] ?? "").toString(),
+      (stats.bandMeans["B8"] ?? "").toString(),
+      (stats.bandMeans["B11"] ?? "").toString(),
+    ])
+  }
+
+  return rows.map((r) => r.join(",")).join("\n")
+}
+
+function downloadCSV(region: string, csv: string) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `MangroveAI_${region}_${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
 export default function DashboardPage() {
   const queryClient = useQueryClient()
   const [region, setRegion] = useState("thane-creek")
   const [year, setYear] = useState("2024")
+  const [showCompare, setShowCompare] = useState(false)
 
   const regionName = studyAreas[region]?.name ?? region
 
@@ -123,18 +189,23 @@ export default function DashboardPage() {
     (imagery.error as Error | null)?.message ??
     null
 
+  const handleExportCSV = () => {
+    const csv = generateCSV(region, queryClient)
+    downloadCSV(region, csv)
+  }
+
   return (
-    <div className="flex h-screen flex-col gap-3 overflow-hidden bg-background p-3 text-foreground">
-      <header className="flex items-center justify-between rounded-xl border bg-card px-4 py-2">
+    <div className="flex h-screen flex-col gap-3 overflow-hidden bg-background p-3 text-foreground print:gap-0 print:p-0">
+      <header className="flex items-center justify-between rounded-xl border bg-card px-4 py-2 print:rounded-none print:border-0 print:bg-white print:text-black">
         <div className="flex items-center gap-2">
-          <Satellite className="size-5 text-primary" />
+          <Satellite className="size-5 text-primary print:text-black" />
           <span className="text-lg font-bold tracking-tight">
-            Mangrove<span className="text-primary">AI</span>
+            Mangrove<span className="text-primary print:text-black">AI</span>
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="hidden text-xs text-muted-foreground lg:inline">
+          <span className="hidden text-xs text-muted-foreground lg:inline print:hidden">
             Study Region
           </span>
           <Select
@@ -143,7 +214,7 @@ export default function DashboardPage() {
               if (v !== null) setRegion(v)
             }}
           >
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-48 print:hidden">
               <SelectValue placeholder="Region" />
             </SelectTrigger>
             <SelectContent>
@@ -157,13 +228,18 @@ export default function DashboardPage() {
             </SelectContent>
           </Select>
 
+          {/* Print-only region/year label */}
+          <span className="hidden print:inline text-sm font-medium">
+            {regionName} · {year}
+          </span>
+
           <Select
             value={year}
             onValueChange={(v) => {
               if (v !== null) setYear(v)
             }}
           >
-            <SelectTrigger className="w-24">
+            <SelectTrigger className="w-24 print:hidden">
               <SelectValue placeholder="Year" />
             </SelectTrigger>
             <SelectContent>
@@ -177,18 +253,31 @@ export default function DashboardPage() {
             </SelectContent>
           </Select>
 
-          <Button onClick={() => window.print()}>
+          <Button
+            variant="outline"
+            onClick={() => setShowCompare(true)}
+            className="print:hidden"
+          >
+            <BarChart3 /> Compare Regions
+          </Button>
+
+          <Button onClick={handleExportCSV} variant="outline" className="print:hidden">
+            <FileSpreadsheet /> Export CSV
+          </Button>
+
+          <Button onClick={() => window.print()} className="print:hidden">
             <FileDown /> Export PDF Report
           </Button>
         </div>
       </header>
 
-      <main className="flex min-h-0 flex-1 gap-3">
-        <div className="h-full min-w-0 w-[65%]">
+      <main className="relative flex min-h-0 flex-1 gap-3 print:gap-0">
+        <div className="h-full min-w-0 w-[65%] print:w-full">
           <MapPanel
             regionName={regionName}
             year={year}
             onYearChange={setYear}
+            onRegionChange={setRegion}
             imageryUrl={imagery.data?.url}
             maskUrl={analysis.data?.url}
             loading={loading}
@@ -197,7 +286,7 @@ export default function DashboardPage() {
           />
         </div>
 
-        <aside className="h-full min-w-0 w-[35%]">
+        <aside className="h-full min-w-0 w-[35%] print:hidden">
           <StatsPanel
             regionName={regionName}
             year={year}
@@ -207,7 +296,20 @@ export default function DashboardPage() {
             loading={loading}
           />
         </aside>
+
+        {/* Time Series Drawer - anchored at bottom of main area */}
+        <div className="absolute bottom-3 left-3 z-20 print:hidden">
+          <TimeSeriesDrawer region={region} />
+        </div>
       </main>
+
+      {/* Region Comparison Modal */}
+      {showCompare && (
+        <RegionCompareModal
+          year={year}
+          onClose={() => setShowCompare(false)}
+        />
+      )}
     </div>
   )
 }
