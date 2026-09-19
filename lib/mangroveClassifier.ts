@@ -237,7 +237,7 @@ export async function computeStats(
   // Pixel count per class value (histogram over the classification band)
   const counts = await evaluate<Record<string, Record<string, number>>>(
     classifiedImage.reduceRegion({
-      reducer: ee.Reducer.frequencyHistogram(),
+      reducer: ee.Reducer.frequencyHistogram().unweighted(),
       geometry,
       scale: 10, // 10m × 10m pixels
       maxPixels: 1e13,

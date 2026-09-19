@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { useQueryClient } from "@tanstack/react-query"
+import { useMemo } from "react"
+import { useQueries } from "@tanstack/react-query"
 import { Loader2, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -30,43 +30,29 @@ type RegionCompareModalProps = {
 }
 
 export function RegionCompareModal({ year, onClose }: RegionCompareModalProps) {
-  const queryClient = useQueryClient()
-  const [tick, setTick] = useState(0)
+  const currentQueries = useQueries({
+    queries: regionKeys.map((rk) => ({
+      queryKey: ["classify", rk, year],
+      queryFn: () => fetchClassify(rk, year),
+      staleTime: STALE_TIME,
+    })),
+  })
 
-  // Trigger prefetch for any region/year combos that aren't cached yet
-  useEffect(() => {
-    for (const rk of regionKeys) {
-      queryClient.prefetchQuery({
-        queryKey: ["classify", rk, year],
-        queryFn: () => fetchClassify(rk, year),
-        staleTime: STALE_TIME,
-      })
-      if (year !== BASELINE_YEAR) {
-        queryClient.prefetchQuery({
-          queryKey: ["classify", rk, BASELINE_YEAR],
-          queryFn: () => fetchClassify(rk, BASELINE_YEAR),
-          staleTime: STALE_TIME,
-        })
-      }
-    }
-  }, [queryClient, year])
+  const baselineQueries = useQueries({
+    queries: regionKeys.map((rk) => ({
+      queryKey: ["classify", rk, BASELINE_YEAR],
+      queryFn: () => fetchClassify(rk, BASELINE_YEAR),
+      staleTime: STALE_TIME,
+      enabled: year !== BASELINE_YEAR,
+    })),
+  })
 
-  // Read data from cache
   const regions = useMemo(() => {
-    // tick is used to force re-computation when prefetches settle
-    void tick
     const result: Record<string, RegionData> = {}
-    for (const rk of regionKeys) {
-      const current = queryClient.getQueryData<ClassifyResponse>([
-        "classify",
-        rk,
-        year,
-      ])
-      const baseline = queryClient.getQueryData<ClassifyResponse>([
-        "classify",
-        rk,
-        BASELINE_YEAR,
-      ])
+    
+    regionKeys.forEach((rk, i) => {
+      const current = currentQueries[i].data
+      const baseline = baselineQueries[i].data
       const stats = current?.stats
       const baseStats = baseline?.stats
 
@@ -87,19 +73,13 @@ export function RegionCompareModal({ year, onClose }: RegionCompareModalProps) {
         totalHectares: stats?.totalHectares ?? null,
         ndvi: stats?.mangroveMeanNdvi ?? null,
         trendPct,
-        loading: !stats,
+        loading: currentQueries[i].isPending || (year !== BASELINE_YEAR && baselineQueries[i].isPending),
       }
-    }
+    })
     return result
-  }, [queryClient, year, tick])
+  }, [currentQueries, baselineQueries, year])
 
-  // Poll to re-read cache while any region is still loading
-  const anyLoading = Object.values(regions).some((r) => r.loading)
-  useEffect(() => {
-    if (!anyLoading) return
-    const id = setInterval(() => setTick((t) => t + 1), 2000)
-    return () => clearInterval(id)
-  }, [anyLoading])
+  const anyLoading = currentQueries.some((q) => q.isPending) || (year !== BASELINE_YEAR && baselineQueries.some((q) => q.isPending))
 
   const rows: {
     label: string
