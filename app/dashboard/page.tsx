@@ -8,6 +8,7 @@ import { MapPanel } from "@/components/dashboard/map-panel"
 import { StatsPanel } from "@/components/dashboard/stats-panel"
 import { TimeSeriesDrawer } from "@/components/dashboard/time-series-drawer"
 import { RegionCompareModal } from "@/components/dashboard/region-compare-modal"
+import { ChangeDetectionView } from "@/components/dashboard/change-detection-view"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -126,6 +127,7 @@ export default function DashboardPage() {
   const [region, setRegion] = useState("thane-creek")
   const [year, setYear] = useState("2024")
   const [showCompare, setShowCompare] = useState(false)
+  const [showChangeDetection, setShowChangeDetection] = useState(false)
 
   const regionName = studyAreas[region]?.name ?? region
 
@@ -260,6 +262,14 @@ export default function DashboardPage() {
           >
             <BarChart3 /> Compare Regions
           </Button>
+          
+          <Button
+            variant={showChangeDetection ? "default" : "outline"}
+            onClick={() => setShowChangeDetection(!showChangeDetection)}
+            className="print:hidden"
+          >
+            Change Detection
+          </Button>
 
           <Button onClick={handleExportCSV} variant="outline" className="print:hidden">
             <FileSpreadsheet /> Export CSV
@@ -272,30 +282,36 @@ export default function DashboardPage() {
       </header>
 
       <main className="relative flex min-h-0 flex-1 gap-3 print:gap-0">
-        <div className="h-full min-w-0 w-[65%] print:w-full">
-          <MapPanel
-            regionName={regionName}
-            year={year}
-            onYearChange={setYear}
-            onRegionChange={setRegion}
-            imageryUrl={imagery.data?.url}
-            maskUrl={analysis.data?.url}
-            loading={loading}
-            fetching={fetching}
-            error={error}
-          />
-        </div>
+        {showChangeDetection ? (
+          <ChangeDetectionView region={region} currentYear={year} />
+        ) : (
+          <>
+            <div className="h-full min-w-0 w-[65%] print:w-full">
+              <MapPanel
+                regionName={regionName}
+                year={year}
+                onYearChange={setYear}
+                onRegionChange={setRegion}
+                imageryUrl={imagery.data?.url}
+                maskUrl={analysis.data?.url}
+                loading={loading}
+                fetching={fetching}
+                error={error}
+              />
+            </div>
 
-        <aside className="h-full min-w-0 w-[35%] print:hidden">
-          <StatsPanel
-            regionName={regionName}
-            year={year}
-            stats={analysis.data?.stats}
-            baselineStats={baseline.data?.stats ?? analysis.data?.stats}
-            debug={analysis.data?.debug}
-            loading={loading}
-          />
-        </aside>
+            <aside className="h-full min-w-0 w-[35%] print:hidden">
+              <StatsPanel
+                regionName={regionName}
+                year={year}
+                stats={analysis.data?.stats}
+                baselineStats={baseline.data?.stats ?? analysis.data?.stats}
+                debug={analysis.data?.debug}
+                loading={loading}
+              />
+            </aside>
+          </>
+        )}
 
         {/* Time Series Drawer - anchored at bottom of main area */}
         <div className="absolute bottom-3 left-3 z-20 print:hidden">
