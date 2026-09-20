@@ -31,6 +31,13 @@ export async function fetchChange(region: string, from: string, to: string) {
   return data
 }
 
+export async function fetchCauses(region: string, from: string, to: string) {
+  const res = await fetch(`/api/change/${region}/causes?from=${from}&to=${to}`)
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || "Failed to fetch cause data")
+  return data
+}
+
 // Re-using the same GeeImage pattern for correct loading state
 function GeeImage({
   src,
@@ -112,6 +119,13 @@ export function ChangeDetectionView({
   const { data, isLoading, isFetching, error } = useQuery({
     queryKey: ["change", region, fromYear, toYear],
     queryFn: () => fetchChange(region, fromYear, toYear),
+    placeholderData: keepPreviousData,
+    staleTime: STALE_TIME,
+  })
+
+  const { data: causesData, isLoading: causesLoading } = useQuery({
+    queryKey: ["causes", region, fromYear, toYear],
+    queryFn: () => fetchCauses(region, fromYear, toYear),
     placeholderData: keepPreviousData,
     staleTime: STALE_TIME,
   })
@@ -302,6 +316,60 @@ export function ChangeDetectionView({
                       <span className="font-mono">{stats?.pixelCounts.gain.toLocaleString()}</span>
                     </div>
                   </div>
+                </div>
+
+                {/* Causes of Mangrove Loss */}
+                <div className="rounded-lg border bg-card p-4">
+                  <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Drivers of Mangrove Loss
+                  </h4>
+                  {causesLoading ? (
+                    <div className="space-y-3">
+                      <div className="h-6 animate-pulse rounded bg-muted w-3/4" />
+                      <div className="h-6 animate-pulse rounded bg-muted w-1/2" />
+                    </div>
+                  ) : causesData?.causes?.breakdown ? (
+                    <div className="space-y-4">
+                      {Object.entries(causesData.causes.breakdown)
+                        .filter(([k]) => k !== "Aquaculture/Conversion" && k !== "Unclassified")
+                        .map(([category, stats]: [string, any]) => (
+                        <div key={category} className="space-y-1.5">
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium">{category}</span>
+                            <span className="text-muted-foreground">{stats.percentage.toFixed(1)}%</span>
+                          </div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                            <div 
+                              className={cn("h-full rounded-full", category === "Urban/Infrastructure" ? "bg-amber-500" : "bg-blue-500")} 
+                              style={{ width: `${stats.percentage}%` }} 
+                            />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">{stats.hectares.toFixed(2)} ha</p>
+                        </div>
+                      ))}
+                      
+                      {/* Unclassified separate */}
+                      {causesData.causes.breakdown["Unclassified"] && (
+                        <div className="space-y-1.5 pt-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium text-muted-foreground">Unclassified</span>
+                            <span className="text-muted-foreground">{causesData.causes.breakdown["Unclassified"].percentage.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-4 border-t pt-3">
+                        <p className="text-[11px] text-muted-foreground italic leading-relaxed">
+                          * These are rule-based heuristic categories based on distance-to-infrastructure (ESA WorldCover) and water-index thresholds, not a trained ML classifier.
+                        </p>
+                        <p className="text-[11px] text-muted-foreground italic mt-2 leading-relaxed">
+                          * Note: &quot;Aquaculture/Conversion&quot; rule checks are currently disabled in this build. 0% does not indicate it was checked and ruled out.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Cause attribution unavailable.</p>
+                  )}
                 </div>
 
               </div>

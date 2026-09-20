@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
-import { BarChart3, FileDown, FileSpreadsheet, Satellite } from "lucide-react"
+import { BarChart3, FileDown, FileSpreadsheet, Satellite, Home } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { MapPanel } from "@/components/dashboard/map-panel"
 import { StatsPanel } from "@/components/dashboard/stats-panel"
@@ -123,6 +124,7 @@ function downloadCSV(region: string, csv: string) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
   const queryClient = useQueryClient()
   const [region, setRegion] = useState("thane-creek")
   const [year, setYear] = useState("2024")
@@ -254,6 +256,17 @@ export default function DashboardPage() {
               </SelectGroup>
             </SelectContent>
           </Select>
+
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowCompare(false)
+              setShowChangeDetection(false)
+            }}
+            className="print:hidden"
+          >
+            <Home /> Home
+          </Button>
 
           <Button
             variant="outline"
