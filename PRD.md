@@ -147,10 +147,10 @@ Defined in `lib/area.ts`:
 | Key | Name | Bounding Box [minLng, minLat, maxLng, maxLat] |
 |---|---|---|
 | `thane-creek` | Thane Creek | [72.960, 19.080, 73.020, 19.160] |
-| `pichavaram` | Pichavaram Mangrove Forest | [79.760, 11.400, 79.820, 11.460] |
+| `bhitarkanika` | Bhitarkanika Mangrove Forest | [86.75, 20.60, 87.05, 20.80] |
 | `sundarbans-core` | Sundarbans (Indian Delta Core) | [88.750, 21.850, 88.950, 22.050] |
 
-**Timeline years:** `["2020", "2021", "2022", "2023", "2024", "2025", "2026"]`
+**Timeline years:** `["2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026"]`
 **Baseline year:** `"2020"` (used for % change calculations)
 
 ---
