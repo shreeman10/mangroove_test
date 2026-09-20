@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation"
 import { MapPanel } from "@/components/dashboard/map-panel"
 import { StatsPanel } from "@/components/dashboard/stats-panel"
 import { TimeSeriesDrawer } from "@/components/dashboard/time-series-drawer"
-import { RegionCompareModal } from "@/components/dashboard/region-compare-modal"
+import { RegionCompareView } from "@/components/dashboard/region-compare-view"
 import { ChangeDetectionView } from "@/components/dashboard/change-detection-view"
 import { Button } from "@/components/ui/button"
 import {
@@ -128,8 +128,7 @@ export default function DashboardPage() {
   const queryClient = useQueryClient()
   const [region, setRegion] = useState("thane-creek")
   const [year, setYear] = useState("2024")
-  const [showCompare, setShowCompare] = useState(false)
-  const [showChangeDetection, setShowChangeDetection] = useState(false)
+  const [viewMode, setViewMode] = useState<"home" | "change" | "compare">("home")
 
   const regionName = studyAreas[region]?.name ?? region
 
@@ -259,26 +258,23 @@ export default function DashboardPage() {
 
           <Button
             variant="outline"
-            onClick={() => {
-              setShowCompare(false)
-              setShowChangeDetection(false)
-            }}
+            onClick={() => setViewMode("home")}
             className="print:hidden"
           >
             <Home /> Home
           </Button>
 
           <Button
-            variant="outline"
-            onClick={() => setShowCompare(true)}
+            variant={viewMode === "compare" ? "default" : "outline"}
+            onClick={() => setViewMode(viewMode === "compare" ? "home" : "compare")}
             className="print:hidden"
           >
             <BarChart3 /> Compare Regions
           </Button>
           
           <Button
-            variant={showChangeDetection ? "default" : "outline"}
-            onClick={() => setShowChangeDetection(!showChangeDetection)}
+            variant={viewMode === "change" ? "default" : "outline"}
+            onClick={() => setViewMode(viewMode === "change" ? "home" : "change")}
             className="print:hidden"
           >
             Change Detection
@@ -295,8 +291,10 @@ export default function DashboardPage() {
       </header>
 
       <main className="relative flex min-h-0 flex-1 gap-3 print:gap-0">
-        {showChangeDetection ? (
+        {viewMode === "change" ? (
           <ChangeDetectionView region={region} currentYear={year} />
+        ) : viewMode === "compare" ? (
+          <RegionCompareView year={year} />
         ) : (
           <>
             <div className="h-full min-w-0 w-[65%] print:w-full">
@@ -332,13 +330,6 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* Region Comparison Modal */}
-      {showCompare && (
-        <RegionCompareModal
-          year={year}
-          onClose={() => setShowCompare(false)}
-        />
-      )}
     </div>
   )
 }
