@@ -28,5 +28,5 @@ export type ClassifyResponse = {
   debug?: ClassifyDebug
 }
 
-export const TIMELINE_YEARS = ["2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026"]
+export const TIMELINE_YEARS = ["2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026"]
 export const BASELINE_YEAR = "2020"
