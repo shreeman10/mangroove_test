@@ -9,8 +9,7 @@ type Props = {
   params: Promise<{ region: string }>
 }
 
-// In-memory response cache for the cause attribution route
-const causeCache = new Map<string, unknown>()
+
 
 export async function GET(request: NextRequest, { params }: Props) {
   const { region } = await params
@@ -19,13 +18,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   const fromYear = queryParams.get("from") || "2020"
   const toYear = queryParams.get("to") || "2026"
 
-  const cacheKey = `${region}?from=${fromYear}&to=${toYear}`
-  const cached = causeCache.get(cacheKey)
-  if (cached) {
-    return NextResponse.json(cached, {
-      headers: { "Cache-Control": "no-store" },
-    })
-  }
+
 
   try {
     const studyArea = getStudyArea(region)
@@ -39,11 +32,9 @@ export async function GET(request: NextRequest, { params }: Props) {
     const ee = await getEE()
     const geometry = ee.Geometry.Rectangle(studyArea.bbox)
 
-    // Run classifications (this just builds the EE graph, so it's fast)
-    const [fromResult, toResult] = await Promise.all([
-      classifyMangroves(ee, geometry, fromYear),
-      classifyMangroves(ee, geometry, toYear),
-    ])
+    // Run classifications sequentially to avoid GEE Node API evaluate concurrency issues
+    const fromResult = await classifyMangroves(ee, geometry, fromYear)
+    const toResult = await classifyMangroves(ee, geometry, toYear)
 
     // Compute change detection diff
     const diffImage = computeChange(
@@ -67,8 +58,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       toYear,
       causes,
     }
-    
-    causeCache.set(cacheKey, payload)
+
 
     return NextResponse.json(payload, {
       headers: { "Cache-Control": "no-store" },

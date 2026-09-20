@@ -19,93 +19,106 @@ export async function computeCauseAttribution(
   // We want distance to built-up, so built-up should be 0, and non-built-up 1.
   const notBuiltUp = builtUp.not()
   const distToUrbanPx = notBuiltUp.fastDistanceTransform(256)
-  // Multiply by 10m to approximate distance in meters
-  const urbanDist = distToUrbanPx.multiply(10).rename("urban_dist")
+  // Multiply by 10m to approximate distance in meters.
+  // Unmask to 2560 (the max distance) to ensure patches far from urban areas are not dropped.
+  const urbanDist = distToUrbanPx.multiply(10).unmask(2560).rename("urban_dist")
 
   // 2. Erosion/Water Layer
   // Using the "to" year's MNDWI to detect if the loss area transitioned to open water.
   const mndwi = toAugmentedImage.select("MNDWI")
 
-  // 3. Extract contiguous loss patches as vectors
+  // Extract contiguous loss patches as vectors
+  // reduceToVectors automatically adds a 'count' property with the number of pixels.
   const lossMask = diffImage.eq(1)
   const lossVectors = lossMask.updateMask(lossMask).reduceToVectors({
     geometry,
+    crs: diffImage.projection(),
     scale: 10,
     geometryType: "polygon",
-    eightConnected: true,
-    maxPixels: 1e10,
+    eightConnected: false,
+    maxPixels: 1e13,
   })
 
-  // 4. Feature map: calculate patch metrics and assign cause
-  const vectorsWithCause = lossVectors.map((feat: any) => {
-    const patchGeom = feat.geometry()
-    const patchArea = patchGeom.area()
-    const boundsArea = patchGeom.bounds().area()
-    const rectRatio = ee.Number(
-      ee.Algorithms.If(
-        boundsArea.gt(0),
-        patchArea.divide(boundsArea),
-        0
-      )
-    )
+  const combinedImage = ee.Image.cat([
+    mndwi.unmask(-999).rename("MNDWI"), 
+    urbanDist
+  ])
+  // 4. Compute mean spectral/distance values over each patch
+  const reduced = combinedImage.reduceRegions({
+    collection: lossVectors,
+    reducer: ee.Reducer.mean(),
+    scale: 10,
+  })
 
-    const patchMeans = ee.Image.cat([mndwi, urbanDist]).reduceRegion({
-      reducer: ee.Reducer.mean(),
-      geometry: patchGeom,
-      scale: 10,
-      maxPixels: 1e8,
-    })
-
-    const hasMndwi = patchMeans.contains("MNDWI")
-    const meanMndwi = ee.Number(
-      ee.Algorithms.If(hasMndwi, patchMeans.get("MNDWI"), -999)
-    )
+  // 5. Feature map: assign cause
+  const vectorsWithCause = reduced.map((feat: any) => {
+    const props = ee.Dictionary(feat.toDictionary())
     
-    const hasUrban = patchMeans.contains("urban_dist")
-    const meanUrbanDist = ee.Number(
-      ee.Algorithms.If(hasUrban, patchMeans.get("urban_dist"), 9999)
-    )
-
-    // --- RULE THRESHOLDS ---
-    // Urban: Mean distance to built-up < 200m
+    const meanMndwi = ee.Number(props.get("MNDWI", -999))
+    const meanUrbanDist = ee.Number(props.get("urban_dist", 9999))
+    
+    // Use the native pixel count instead of expensive vector area math
+    const pixelCount = ee.Number(props.get("count", 0))
+    const patchArea = pixelCount.multiply(100)
+    
     const isUrban = meanUrbanDist.lt(200)
-    // Aqua: Patch area / bounding box area > 0.65 (indicates a regular, boxy shape like a pond)
-    const isAqua = rectRatio.gt(0.65)
-    // Water: Mean MNDWI > -0.1 (Slightly lenient; open water is typically > 0, but intertidal can be mixed)
+    // Removed rectangularity check because .bounds().area() exceeds GEE complexity limits
+    const isAqua = ee.Number(0) 
     const isWater = meanMndwi.gt(-0.1)
 
-    // Precedence: Urban > Aquaculture > Erosion
+    // Priority 1: If it turned into water, it's Erosion/Water regardless of how close to the city it is.
+    // Priority 2: Aquaculture (currently disabled)
+    // Priority 3: If it's dry land and near the city, it's Urban conversion.
     const causeCode = ee.Algorithms.If(
-      isUrban,
-      1,
-      ee.Algorithms.If(isAqua, 2, ee.Algorithms.If(isWater, 3, 4))
+      isWater,
+      3,
+      ee.Algorithms.If(isAqua, 2, ee.Algorithms.If(isUrban, 1, 4))
     )
 
     return feat.set({
-      patchArea: ee.Number(patchArea),
-      cause: ee.Number(4),
+      cause: ee.Number(causeCode),
+      patchArea: patchArea
     })
   })
 
-  // 5. Evaluate arrays
-  const causesArr = (await evaluate<number[]>(vectorsWithCause.aggregate_array("cause"))) || []
-  const areasArr = (await evaluate<number[]>(vectorsWithCause.aggregate_array("patchArea"))) || []
+  // 5. Aggregate areas by cause
+  const aggregated = vectorsWithCause.reduceColumns({
+    reducer: ee.Reducer.sum().group({
+      groupField: 1,
+      groupName: "cause",
+    }),
+    selectors: ["patchArea", "cause"],
+  })
+
+  // 6. Evaluate and format
+  const result = await evaluate<any>(aggregated)
+  const lossCount = await evaluate<number>(lossVectors.size())
+  const reducedCount = await evaluate<number>(reduced.size())
+  const finalCount = await evaluate<number>(vectorsWithCause.size())
   
+  // Strip geometry to prevent GEE JSON payload limits from silencing the evaluate
+  const noGeom = vectorsWithCause.map((f: any) => ee.Feature(null, f.toDictionary()))
+  const sampleList = await evaluate<any[]>(noGeom.toList(5))
+  const sampleFeatures = sampleList ? sampleList.map((f: any) => f.properties) : []
+
+  const groups = result?.groups || []
   let urbanArea = 0, aquaArea = 0, waterArea = 0, unclassifiedArea = 0
 
-  for (let i = 0; i < causesArr.length; i++) {
-    const cause = causesArr[i]
-    const areaHa = areasArr[i] / 10000 // Convert sq meters to hectares
-    
-    if (cause === 1) urbanArea += areaHa
-    else if (cause === 2) aquaArea += areaHa
-    else if (cause === 3) waterArea += areaHa
-    else if (cause === 4) unclassifiedArea += areaHa
-  }
+  groups.forEach((g: any) => {
+    const areaHa = g.sum / 10000 // Convert sq meters to hectares
+    if (g.cause === 1) urbanArea += areaHa
+    else if (g.cause === 2) aquaArea += areaHa
+    else if (g.cause === 3) waterArea += areaHa
+    else if (g.cause === 4) unclassifiedArea += areaHa
+  })
 
   const totalLoss = urbanArea + aquaArea + waterArea + unclassifiedArea
 
   return {
+    lossCount,
+    reducedCount,
+    finalCount,
+    sampleFeatures,
     totalLossHectares: totalLoss,
     breakdown: {
       "Urban/Infrastructure": {
