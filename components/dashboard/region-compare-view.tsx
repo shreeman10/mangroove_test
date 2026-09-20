@@ -172,7 +172,7 @@ export function RegionCompareView({ year }: RegionCompareViewProps) {
     // Shorten long names for the tight chart layout so Recharts doesn't drop them
     let shortName = studyAreas[rk].name;
     if (rk === "thane-creek") shortName = "Thane";
-    if (rk === "pichavaram") shortName = "Pichavaram";
+    if (rk === "bhitarkanika") shortName = "Bhitarkanika";
     if (rk === "sundarbans-core") shortName = "Sundarbans";
 
     return {

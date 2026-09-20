@@ -15,9 +15,9 @@ export const studyAreas: Record<string, StudyArea> = {
     name: "Thane Creek",
     bbox: [72.960, 19.080, 73.020, 19.160], // [minLng, minLat, maxLng, maxLat]
   },
-  "pichavaram": {
-    name: "Pichavaram Mangrove Forest",
-    bbox: [79.760, 11.400, 79.820, 11.460], // Tamil Nadu estuarine mangrove network
+  "bhitarkanika": {
+    name: "Bhitarkanika Mangrove Forest",
+    bbox: [86.75, 20.60, 87.05, 20.80], // Odisha coast mangrove ecosystem
   },
   "sundarbans-core": {
     name: "Sundarbans (Indian Delta Core)",

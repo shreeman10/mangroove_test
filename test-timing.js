@@ -1,4 +1,4 @@
-const regionKeys = ['thane-creek', 'pichavaram', 'sundarbans-core'];
+const regionKeys = ['thane-creek', 'bhitarkanika', 'sundarbans-core'];
 const year = '2024';
 
 function log(msg) {

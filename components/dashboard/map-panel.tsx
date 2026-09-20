@@ -49,7 +49,7 @@ const COLORBLIND_FILTER = "hue-rotate(180deg) saturate(1.4) brightness(1.1)"
 // Approximate pin positions for the India minimap SVG (normalized 0–100)
 const REGION_PINS: Record<string, { x: number; y: number; label: string }> = {
   "thane-creek": { x: 32, y: 52, label: "Thane Creek" },
-  pichavaram: { x: 40, y: 72, label: "Pichavaram" },
+  bhitarkanika: { x: 55, y: 50, label: "Bhitarkanika" },
   "sundarbans-core": { x: 62, y: 46, label: "Sundarbans" },
 }
 

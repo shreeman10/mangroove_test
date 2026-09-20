@@ -1,4 +1,4 @@
-const regions = ['thane-creek', 'pichavaram', 'sundarbans-core'];
+const regions = ['thane-creek', 'bhitarkanika', 'sundarbans-core'];
 const years = [2015, 2016, 2017, 2018, 2019, 2020];
 
 async function test() {
