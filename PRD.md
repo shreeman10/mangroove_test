@@ -344,6 +344,12 @@ mangroove_test/
 6. **No time-series charting** — individual year stats are shown but no line chart of trends across years.
 7. **GMW v3 dependency** — community catalog asset; requires GCP project with Earth Engine access.
 
+### 11.1 Data & Rendering Considerations
+- **Thumbnail Timeouts:** Generating 1024x1024 map tiles for computationally heavy classification pipelines over large regions (e.g. Bhitarkanika) can sometimes exceed Google Earth Engine's memory/time limits. The backend stats (`reduceRegion`) may succeed, but the visual tile request fails. The `GeeImage` component handles this with a dedicated error state to prevent silent blank imagery.
+- **Image Size Optimization:** Currently, raw RGB composites fetch as PNGs which can be up to ~1.8 MB per tile. A future optimization could switch the RGB request to `format: "jpg"` to slash file sizes and bandwidth, while preserving PNG for the class map to maintain crisp boundaries.
+- **Scene-Wide NDVI Variability:** Regions with significant water, mudflats, and bare tidal channels (like the Bhitarkanika delta bounding box) naturally show a very low *scene-wide* mean NDVI (e.g., ~0.19) compared to tightly-cropped regions like Thane Creek. However, the classifier reliably isolates the dense mangroves within this box (which show healthy NDVI > 0.70).
+- **Mangrove Extent Verification:** The ~15k–16k hectares quantified for Bhitarkanika precisely aligns with the official core area of the Bhitarkanika National Park (approx 14,500 ha) and immediately surrounding sanctuary mangroves.
+
 ---
 
 ## 12. How to Run

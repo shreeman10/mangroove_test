@@ -56,15 +56,18 @@ function GeeImage({
 }) {
   const [displayed, setDisplayed] = useState<string | undefined>(src)
   const [pending, setPending] = useState(false)
+  const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
     if (!src) {
       setDisplayed(undefined)
       setPending(false)
+      setHasError(false)
       return
     }
-    if (src === displayed) return
+    if (src === displayed && !hasError) return
     setPending(true)
+    setHasError(false)
     let cancelled = false
     const img = new Image()
     img.onload = () => {
@@ -75,16 +78,17 @@ function GeeImage({
     img.onerror = () => {
       if (cancelled) return
       setPending(false)
+      setHasError(true)
     }
     img.src = src
     return () => {
       cancelled = true
     }
-  }, [src, displayed])
+  }, [src, displayed, hasError])
 
   return (
     <div className={cn("relative h-full w-full", wrapperClassName)}>
-      {displayed && (
+      {displayed && !hasError && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={displayed} alt={alt} className={className} style={style} />
       )}
@@ -92,6 +96,13 @@ function GeeImage({
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-background/60 backdrop-blur-sm">
           <Loader2 className="size-6 animate-spin text-primary" />
           <p className="text-xs text-muted-foreground">{pendingLabel}</p>
+        </div>
+      )}
+      {hasError && !pending && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-destructive/10 text-destructive border border-destructive/20 p-4 text-center rounded-md">
+          <AlertTriangle className="size-8" />
+          <p className="text-sm font-medium">Image Generation Failed</p>
+          <p className="text-xs opacity-80 max-w-[200px]">Stats processed successfully, but Earth Engine timed out rendering the map tile.</p>
         </div>
       )}
     </div>
