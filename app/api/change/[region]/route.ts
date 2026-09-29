@@ -40,8 +40,8 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     // Run both classifications concurrently
     const [fromResult, toResult] = await Promise.all([
-      classifyMangroves(ee, geometry, fromYear),
-      classifyMangroves(ee, geometry, toYear),
+      classifyMangroves(ee, geometry, fromYear, region),
+      classifyMangroves(ee, geometry, toYear, region),
     ])
 
     // Compute change detection diff

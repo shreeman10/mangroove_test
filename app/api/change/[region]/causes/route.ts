@@ -33,8 +33,8 @@ export async function GET(request: NextRequest, { params }: Props) {
     const geometry = ee.Geometry.Rectangle(studyArea.bbox)
 
     // Run classifications sequentially to avoid GEE Node API evaluate concurrency issues
-    const fromResult = await classifyMangroves(ee, geometry, fromYear)
-    const toResult = await classifyMangroves(ee, geometry, toYear)
+    const fromResult = await classifyMangroves(ee, geometry, fromYear, region)
+    const toResult = await classifyMangroves(ee, geometry, toYear, region)
 
     // Compute change detection diff
     const diffImage = computeChange(

@@ -318,6 +318,7 @@ export default function DashboardPage() {
                 stats={analysis.data?.stats}
                 baselineStats={baseline.data?.stats ?? analysis.data?.stats}
                 debug={analysis.data?.debug}
+                sanityCheckWarning={analysis.data?.sanityCheckWarning}
                 loading={loading}
               />
             </aside>
