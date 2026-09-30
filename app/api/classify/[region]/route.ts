@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getStudyArea } from "@/lib/area"
 import { getEE } from "@/lib/gee"
-import { classifyMangroves, computeStats } from "@/lib/mangroveClassifier"
+import { classifyMangroves, computeStats, getBaselineStats } from "@/lib/mangroveClassifier"
 
 type Props = {
   params: Promise<{ region: string }>
@@ -38,11 +38,22 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     const geometry = ee.Geometry.Rectangle(studyArea.bbox)
 
-    const { classifiedImage, augmentedImage, debug } = await classifyMangroves(ee, geometry, year)
+    const { classifiedImage, augmentedImage, debug } = await classifyMangroves(ee, geometry, year, region)
 
     // Numerical stats: hectares per class, NDVI health index, band means.
     // Computed from the same classified image — no extra RF training run.
     const stats = await computeStats(ee, classifiedImage, augmentedImage, geometry)
+    
+    // Sanity check: compare to 2020 baseline
+    let sanityCheckWarning = null;
+    if (year !== "2020") {
+      const baselineStats = await getBaselineStats(ee, geometry, region);
+      const diff = Math.abs(stats.totalHectares - baselineStats.totalHectares);
+      const percentChange = (diff / baselineStats.totalHectares) * 100;
+      if (percentChange > 25) {
+        sanityCheckWarning = `Large change (${percentChange.toFixed(1)}%): possibly tide, cloud, or composite artifacts. Verify before trusting.`;
+      }
+    }
 
     // Classification values: 0 = non-mangrove, 1 = degraded mangrove,
     // 2 = healthy mangrove → dark / amber / emerald palette.
@@ -73,6 +84,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       year,
       stats,
       debug,
+      sanityCheckWarning,
     }
     responseCache.set(cacheKey, payload)
 

@@ -17,6 +17,16 @@ export type MangroveStats = {
 export type ClassifyDebug = {
   totalTrainingPoints: number
   s2ImageCount: number
+  validation: {
+    overallAccuracy: number
+    kappa: number
+    producerAccuracy: number
+    userAccuracy: number
+  }
+  trainingYear: number
+  labelSource: string
+  isTrainingYear: boolean
+  note: string
 }
 
 export type ClassifyResponse = {
@@ -26,6 +36,7 @@ export type ClassifyResponse = {
   year?: string
   stats?: MangroveStats
   debug?: ClassifyDebug
+  sanityCheckWarning?: string | null
 }
 
 export const TIMELINE_YEARS = ["2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026"]
