@@ -27,6 +27,9 @@ export type ClassifyDebug = {
   labelSource: string
   isTrainingYear: boolean
   note: string
+  constants?: { trees: number }
+  multiSeedMeanStd?: { oa: { mean: number, std: number } }
+  wallToWallMetrics?: { oa: number, pa: number, ua: number }
 }
 
 export type ClassifyResponse = {
@@ -36,7 +39,6 @@ export type ClassifyResponse = {
   year?: string
   stats?: MangroveStats
   debug?: ClassifyDebug
-  sanityCheckWarning?: string | null
 }
 
 export const TIMELINE_YEARS = ["2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026"]

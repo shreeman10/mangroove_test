@@ -45,7 +45,6 @@ type StatsPanelProps = {
   stats?: MangroveStats
   baselineStats?: MangroveStats
   debug?: ClassifyDebug
-  sanityCheckWarning?: string | null
   loading: boolean
 }
 
@@ -55,7 +54,6 @@ export function StatsPanel({
   stats,
   baselineStats,
   debug,
-  sanityCheckWarning,
   loading,
 }: StatsPanelProps) {
   const total = stats?.totalHectares
@@ -112,12 +110,6 @@ export function StatsPanel({
               {stats ? `${stats.degradedHectares.toLocaleString(undefined, { maximumFractionDigits: 1 })} ha` : "—"}
             </span>
           </div>
-          {sanityCheckWarning && (
-            <div className="mt-3 rounded-md bg-yellow-500/10 p-2 text-[11px] text-yellow-600 dark:text-yellow-500 border border-yellow-500/20">
-              <strong className="block mb-0.5">Warning</strong>
-              {sanityCheckWarning}
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -196,8 +188,8 @@ export function StatsPanel({
               </p>
               <p>
                 Agreement with GMW 2020 on held-out spatial blocks:
-                {(debug.multiSeedMeanStd?.oa?.mean * 100)?.toFixed(1) ?? (debug.validation.overallAccuracy * 100).toFixed(1)}% OA
-                (±{(debug.multiSeedMeanStd?.oa?.std * 100)?.toFixed(1) ?? "0.0"}%)
+                {((debug.multiSeedMeanStd?.oa?.mean ?? 0) * 100)?.toFixed(1) ?? (debug.validation.overallAccuracy * 100).toFixed(1)}% OA
+                (±{((debug.multiSeedMeanStd?.oa?.std ?? 0) * 100)?.toFixed(1) ?? "0.0"}%)
               </p>
               {debug.wallToWallMetrics && (
                 <p>

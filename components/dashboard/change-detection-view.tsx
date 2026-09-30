@@ -343,21 +343,24 @@ export function ChangeDetectionView({
                     <div className="space-y-4">
                       {Object.entries(causesData.causes.breakdown)
                         .filter(([k]) => k !== "Aquaculture/Conversion" && k !== "Unclassified")
-                        .map(([category, stats]: [string, { percentage: number, hectares: number }]) => (
+                        .map(([category, stats]) => {
+                          const s = stats as { percentage: number, hectares: number };
+                          return (
                         <div key={category} className="space-y-1.5">
                           <div className="flex justify-between text-sm">
                             <span className="font-medium">{category}</span>
-                            <span className="text-muted-foreground">{stats.percentage.toFixed(1)}%</span>
+                            <span className="text-muted-foreground">{s.percentage.toFixed(1)}%</span>
                           </div>
                           <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
                             <div 
                               className={cn("h-full rounded-full", category === "Urban/Infrastructure" ? "bg-amber-500" : "bg-blue-500")} 
-                              style={{ width: `${stats.percentage}%` }} 
+                              style={{ width: `${s.percentage}%` }} 
                             />
                           </div>
-                          <p className="text-[10px] text-muted-foreground">{stats.hectares.toFixed(2)} ha</p>
+                          <p className="text-[10px] text-muted-foreground">{s.hectares.toFixed(2)} ha</p>
                         </div>
-                      ))}
+                        );
+                      })}
                       
                       {/* Unclassified separate */}
                       {causesData.causes.breakdown["Unclassified"] && (
