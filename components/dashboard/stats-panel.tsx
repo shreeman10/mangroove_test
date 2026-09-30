@@ -45,6 +45,7 @@ type StatsPanelProps = {
   stats?: MangroveStats
   baselineStats?: MangroveStats
   debug?: ClassifyDebug
+  sanityCheckWarning?: string | null
   loading: boolean
 }
 
@@ -54,6 +55,7 @@ export function StatsPanel({
   stats,
   baselineStats,
   debug,
+  sanityCheckWarning,
   loading,
 }: StatsPanelProps) {
   const total = stats?.totalHectares
@@ -110,6 +112,12 @@ export function StatsPanel({
               {stats ? `${stats.degradedHectares.toLocaleString(undefined, { maximumFractionDigits: 1 })} ha` : "—"}
             </span>
           </div>
+          {sanityCheckWarning && (
+            <div className="mt-3 rounded-md bg-yellow-500/10 p-2 text-[11px] text-yellow-600 dark:text-yellow-500 border border-yellow-500/20">
+              <strong className="block mb-0.5">Warning</strong>
+              {sanityCheckWarning}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -137,8 +145,14 @@ export function StatsPanel({
             >
               {loading ? "—" : `${gaugePct}%`}
             </text>
-            <text x="60" y="74" textAnchor="middle" className="fill-muted-foreground text-[9px]">
-              NDVI-based
+            <text x="60" y="74" textAnchor="middle" className="fill-muted-foreground text-[7px]">
+              NDVI threshold (&gt;= 0.5)
+            </text>
+            <text x="60" y="82" textAnchor="middle" className="fill-muted-foreground text-[7px]">
+              on selected year
+            </text>
+            <text x="60" y="90" textAnchor="middle" className="fill-muted-foreground text-[7px]">
+              (not model output)
             </text>
           </svg>
           <div>
@@ -175,10 +189,31 @@ export function StatsPanel({
             </tbody>
           </table>
           {debug && (
-            <p className="mt-2 border-t border-border pt-2 text-[10px] text-muted-foreground">
-              Random Forest ×50 trees · {debug.totalTrainingPoints} training points ·{" "}
-              {debug.s2ImageCount} Sentinel-2 scenes
-            </p>
+            <div className="mt-2 border-t border-border pt-2 text-[10px] text-muted-foreground flex flex-col gap-1">
+              <p>
+                Random Forest ×{debug.constants?.trees || 100} trees · {debug.totalTrainingPoints} training points ({debug.trainingYear} {debug.labelSource}) ·{" "}
+                {debug.s2ImageCount} Sentinel-2 scenes
+              </p>
+              <p>
+                Agreement with GMW 2020 on held-out spatial blocks:
+                {(debug.multiSeedMeanStd?.oa?.mean * 100)?.toFixed(1) ?? (debug.validation.overallAccuracy * 100).toFixed(1)}% OA
+                (±{(debug.multiSeedMeanStd?.oa?.std * 100)?.toFixed(1) ?? "0.0"}%)
+              </p>
+              {debug.wallToWallMetrics && (
+                <p>
+                  Pixel-level agreement with GMW 2020 (held-out blocks, prevalence-weighted):
+                  {(debug.wallToWallMetrics.oa * 100).toFixed(1)}% OA · PA={(debug.wallToWallMetrics.pa * 100).toFixed(1)}% · UA={(debug.wallToWallMetrics.ua * 100).toFixed(1)}%
+                </p>
+              )}
+              <p className="italic">
+                * Note: The deployed model is retrained on all data. These metrics describe the validation model.
+              </p>
+              {!debug.isTrainingYear && (
+                <p className="text-yellow-600 dark:text-yellow-500">
+                  {debug.note}
+                </p>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>

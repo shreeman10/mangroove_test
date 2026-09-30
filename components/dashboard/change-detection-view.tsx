@@ -160,7 +160,7 @@ export function ChangeDetectionView({
           <div className="flex items-center justify-between border-b px-4 py-2">
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium">Period:</span>
-              <Select value={fromYear} onValueChange={setFromYear}>
+              <Select value={fromYear} onValueChange={(v) => { if (v) setFromYear(v) }}>
                 <SelectTrigger className="w-24 h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -173,7 +173,7 @@ export function ChangeDetectionView({
                 </SelectContent>
               </Select>
               <ArrowRight className="size-4 text-muted-foreground" />
-              <Select value={toYear} onValueChange={setToYear}>
+              <Select value={toYear} onValueChange={(v) => { if (v) setToYear(v) }}>
                 <SelectTrigger className="w-24 h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -343,7 +343,7 @@ export function ChangeDetectionView({
                     <div className="space-y-4">
                       {Object.entries(causesData.causes.breakdown)
                         .filter(([k]) => k !== "Aquaculture/Conversion" && k !== "Unclassified")
-                        .map(([category, stats]: [string, any]) => (
+                        .map(([category, stats]: [string, { percentage: number, hectares: number }]) => (
                         <div key={category} className="space-y-1.5">
                           <div className="flex justify-between text-sm">
                             <span className="font-medium">{category}</span>

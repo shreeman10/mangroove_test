@@ -1,0 +1,57 @@
+=== TASK 4a: GMW GUARD CHECK ===
+system:index = gmw_v3_2020
+system:time_start = 1577842200000
+calendar year = 2020
+
+=== TASK 4c: CLOUD-FREE OBSERVATIONS ===
+2020 clear_count: undefined
+2023 clear_count: undefined
+
+=== PREPARING CLASSIFICATION ===
+
+=== TASK 1: WALL-TO-WALL VALIDATION ===
+
+-- Unsmoothed Model (Class 1+2 as Mangrove) --
+Matrix: TN=103053.87843137243, FP=6464.8117647058825, FN=1662, TP=25699.42352941176
+OA: 0.9406, Kappa: 0.8259
+PA (mangrove): 0.9393, UA (mangrove): 0.7990
+Mangrove prevalence: 19.99%
+Hand-calc check:
+  PA = 25699.42352941176 / 27361.42352941176 = 0.9393
+  UA = 25699.42352941176 / 32164.235294117643 = 0.7990
+
+-- Smoothed Model (Mode filter, Class 1+2 as Mangrove) --
+Matrix: TN=104329.43137254892, FP=5189.2588235294115, FN=1496.1607843137253, TP=25865.262745098036
+OA: 0.9512, Kappa: 0.8547
+PA (mangrove): 0.9453, UA (mangrove): 0.8329
+Mangrove prevalence: 19.99%
+Hand-calc check:
+  PA = 25865.262745098036 / 27361.42352941176 = 0.9453
+  UA = 25865.262745098036 / 31054.521568627446 = 0.8329
+
+=== TASK 2: AREA COMPARISON ===
+GMW 2020 Area (25m): 1213.21 ha
+Train-only Model Area (10m): 1598.04 ha (Diff: 31.72%)
+Final Model Area (10m): 1626.98 ha (Diff: 34.11%) *NOTE: Final model is in-sample for 2020
+
+=== TASK 3: ERROR BREAKDOWN BY WORLDCOVER CLASS ===
+Total FP: 6453.1450980392165, Total FN: 1673
+FN share of GMW mangrove pixels: 6.11%
+
+False Positive Breakdown by WorldCover Class:
+Class 10: FP=1328 (20.58% of total FPs) | Rate=8.06% of class
+Class 30: FP=1 (0.02% of total FPs) | Rate=0.06% of class
+Class 40: FP=105 (1.63% of total FPs) | Rate=1.25% of class
+Class 50: FP=267 (4.14% of total FPs) | Rate=0.69% of class
+Class 60: FP=600 (9.30% of total FPs) | Rate=3.72% of class
+Class 80: FP=823.9803921568628 (12.77% of total FPs) | Rate=3.42% of class
+Class 90: FP=4 (0.06% of total FPs) | Rate=2.30% of class
+Class 95: FP=3324.1647058823532 (51.51% of total FPs) | Rate=10.66% of class
+
+False Negative Breakdown by WorldCover Class:
+Class 10: FN=80 (4.78% of total FNs)
+Class 40: FN=81 (4.84% of total FNs)
+Class 60: FN=59 (3.53% of total FNs)
+Class 80: FN=362 (21.64% of total FNs)
+Class 90: FN=8 (0.48% of total FNs)
+Class 95: FN=1083 (64.73% of total FNs)
