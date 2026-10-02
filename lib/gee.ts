@@ -9,6 +9,17 @@ let initialized = false
 let initPromise: Promise<void> | null = null
 
 function loadPrivateKey() {
+
+  const envJson = process.env.GEE_SERVICE_ACCOUNT_JSON
+  if (envJson) {
+    try {
+      return JSON.parse(envJson)
+    } catch (e) {
+      throw new Error("Failed to parse GEE_SERVICE_ACCOUNT_JSON. Ensure it is valid JSON.")
+    }
+  }
+
+
   const keyPath = process.env.GEE_SERVICE_ACCOUNT_KEY_PATH
   if (!keyPath) {
     throw new Error("GEE_SERVICE_ACCOUNT_KEY_PATH is not set in env")
