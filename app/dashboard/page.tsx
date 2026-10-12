@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
-import { BarChart3, FileDown, FileSpreadsheet, Satellite, Home } from "lucide-react"
+import { BarChart3, FileDown, FileSpreadsheet, Satellite, Home, Gauge } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { MapPanel } from "@/components/dashboard/map-panel"
@@ -10,6 +10,7 @@ import { StatsPanel } from "@/components/dashboard/stats-panel"
 import { TimeSeriesDrawer } from "@/components/dashboard/time-series-drawer"
 import { RegionCompareView } from "@/components/dashboard/region-compare-view"
 import { ChangeDetectionView } from "@/components/dashboard/change-detection-view"
+import { MetricsView } from "@/components/dashboard/metrics-view"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -128,7 +129,7 @@ export default function DashboardPage() {
   const queryClient = useQueryClient()
   const [region, setRegion] = useState("thane-creek")
   const [year, setYear] = useState("2024")
-  const [viewMode, setViewMode] = useState<"home" | "change" | "compare">("home")
+  const [viewMode, setViewMode] = useState<"home" | "change" | "compare" | "metrics">("home")
 
   const regionName = studyAreas[region]?.name ?? region
 
@@ -280,6 +281,14 @@ export default function DashboardPage() {
             Change Detection
           </Button>
 
+          <Button
+            variant={viewMode === "metrics" ? "default" : "outline"}
+            onClick={() => setViewMode(viewMode === "metrics" ? "home" : "metrics")}
+            className="print:hidden"
+          >
+            <Gauge /> Metrics
+          </Button>
+
           <Button onClick={handleExportCSV} variant="outline" className="print:hidden">
             <FileSpreadsheet /> Export CSV
           </Button>
@@ -291,7 +300,9 @@ export default function DashboardPage() {
       </header>
 
       <main className="relative flex min-h-0 flex-1 gap-3 print:gap-0">
-        {viewMode === "change" ? (
+        {viewMode === "metrics" ? (
+          <MetricsView />
+        ) : viewMode === "change" ? (
           <ChangeDetectionView region={region} currentYear={year} />
         ) : viewMode === "compare" ? (
           <RegionCompareView year={year} />
