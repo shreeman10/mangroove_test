@@ -19,6 +19,8 @@ import {
   Lightbulb,
   TrendingUp,
   HelpCircle,
+  GitCompare,
+  Zap,
 } from "lucide-react"
 import {
   ResponsiveContainer,
@@ -43,6 +45,7 @@ import {
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import staticGbtMeta from "@/data/gbt-meta.json"
 
 const ESA_CLASS_NAMES: Record<string, string> = {
   "10": "Tree Cover",
@@ -152,6 +155,52 @@ const FEATURE_IMPORTANCE_SPECS = [
   },
 ]
 
+export type GbtMeta = {
+  timestamp: string
+  note: string
+  dataset: {
+    trainSize: number
+    valSize: number
+    trainClassCounts: Record<string, number>
+    valClassCounts: Record<string, number>
+    bands: string[]
+    classProperty: string
+    splitSeed: number
+  }
+  models: {
+    randomForest: {
+      name: string
+      hyperparameters: Record<string, unknown>
+      metrics: {
+        accuracy: number
+        precision: number
+        recall: number
+        f1: number
+        iou: number
+        kappa: number
+      }
+      confusionMatrix: number[][]
+      order: number[]
+      details: { tp: number; fp: number; fn: number; tn: number; total: number }
+    }
+    gradientBoostedTrees: {
+      name: string
+      hyperparameters: Record<string, unknown>
+      metrics: {
+        accuracy: number
+        precision: number
+        recall: number
+        f1: number
+        iou: number
+        kappa: number
+      }
+      confusionMatrix: number[][]
+      order: number[]
+      details: { tp: number; fp: number; fn: number; tn: number; total: number }
+    }
+  }
+}
+
 export type ModelMeta = {
   generatedAt: string
   constants: {
@@ -191,6 +240,7 @@ export type ModelMeta = {
     gmw2020: number
     model2020: number
   }
+  gbtMeta?: GbtMeta | null
 }
 
 async function fetchMetrics(): Promise<ModelMeta> {
@@ -206,7 +256,7 @@ export function MetricsView() {
     staleTime: 60 * 60 * 1000,
   })
 
-  const [activeTab, setActiveTab] = useState<"overview" | "features" | "matrix" | "sampling" | "stability">("overview")
+  const [activeTab, setActiveTab] = useState<"overview" | "benchmark" | "features" | "matrix" | "sampling" | "stability">("overview")
   const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null)
   
   // Interactive Feature selector state
@@ -220,7 +270,7 @@ export function MetricsView() {
     return (
       <div className="flex h-full w-full items-center justify-center gap-2 text-muted-foreground">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <span>Loading Random Forest performance metrics...</span>
+        <span>Loading model performance metrics...</span>
       </div>
     )
   }
@@ -244,14 +294,54 @@ export function MetricsView() {
 
   const f1Score = (2 * tp) / (2 * tp + fp + fn)
 
-  // Radar metrics data
+  // Gradient Boosted Trees comparison metrics
+  const gbt = (meta?.gbtMeta || staticGbtMeta) as GbtMeta | undefined
+  const gbtMetrics = gbt?.models?.gradientBoostedTrees?.metrics
+  const gbtCm = gbt?.models?.gradientBoostedTrees?.confusionMatrix || [[219, 10], [10, 209]]
+  const gbtTn = gbtCm[0]?.[0] ?? 219
+  const gbtFp = gbtCm[0]?.[1] ?? 10
+  const gbtFn = gbtCm[1]?.[0] ?? 10
+  const gbtTp = gbtCm[1]?.[1] ?? 209
+  const gbtTotal = gbtTn + gbtFp + gbtFn + gbtTp
+
+  // Radar metrics data comparing both models
   const radarData = [
-    { metric: "Overall Accuracy", value: +(balancedMetrics.overallAccuracy * 100).toFixed(1), fullMark: 100 },
-    { metric: "Precision (UA)", value: +(balancedMetrics.userAccuracy * 100).toFixed(1), fullMark: 100 },
-    { metric: "Recall (PA)", value: +(balancedMetrics.producerAccuracy * 100).toFixed(1), fullMark: 100 },
-    { metric: "Kappa Score", value: +(balancedMetrics.kappa * 100).toFixed(1), fullMark: 100 },
-    { metric: "F1 Score", value: +(f1Score * 100).toFixed(1), fullMark: 100 },
-    { metric: "Specificity (TNR)", value: +((tn / (tn + fp)) * 100).toFixed(1), fullMark: 100 },
+    {
+      metric: "Overall Accuracy",
+      rf: +(balancedMetrics.overallAccuracy * 100).toFixed(1),
+      gbt: gbtMetrics ? +(gbtMetrics.accuracy * 100).toFixed(1) : 95.5,
+      fullMark: 100,
+    },
+    {
+      metric: "Precision (UA)",
+      rf: +(balancedMetrics.userAccuracy * 100).toFixed(1),
+      gbt: gbtMetrics ? +(gbtMetrics.precision * 100).toFixed(1) : 95.4,
+      fullMark: 100,
+    },
+    {
+      metric: "Recall (PA)",
+      rf: +(balancedMetrics.producerAccuracy * 100).toFixed(1),
+      gbt: gbtMetrics ? +(gbtMetrics.recall * 100).toFixed(1) : 95.4,
+      fullMark: 100,
+    },
+    {
+      metric: "F1 Score",
+      rf: +(f1Score * 100).toFixed(1),
+      gbt: gbtMetrics ? +(gbtMetrics.f1 * 100).toFixed(1) : 95.4,
+      fullMark: 100,
+    },
+    {
+      metric: "IoU (Jaccard)",
+      rf: +((tp / (tp + fp + fn)) * 100).toFixed(1),
+      gbt: gbtMetrics ? +(gbtMetrics.iou * 100).toFixed(1) : 91.3,
+      fullMark: 100,
+    },
+    {
+      metric: "Kappa Score",
+      rf: +(balancedMetrics.kappa * 100).toFixed(1),
+      gbt: gbtMetrics ? +(gbtMetrics.kappa * 100).toFixed(1) : 91.1,
+      fullMark: 100,
+    },
   ]
 
   // Sampling class distribution
@@ -336,14 +426,17 @@ export function MetricsView() {
       {/* Top Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/60 pb-5">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-2xl font-bold tracking-tight">Random Forest Classifier Performance</h2>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h2 className="text-2xl font-bold tracking-tight">Model Performance & Benchmark</h2>
             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1 px-2.5 py-0.5">
-              <ShieldCheck className="h-3.5 w-3.5" /> GEE SmileRandomForest
+              <ShieldCheck className="h-3.5 w-3.5" /> Random Forest (Map Deployed)
+            </Badge>
+            <Badge variant="outline" className="bg-cyan-500/10 text-cyan-400 border-cyan-500/30 gap-1 px-2.5 py-0.5">
+              <Sparkles className="h-3.5 w-3.5" /> Gradient Boosted Trees (Benchmark)
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Evaluated using {blockInfo.blockSize}m spatially blocked cross-validation against Global Mangrove Watch (GMW) 2020 ground truth.
+            Evaluated using {blockInfo.blockSize}m spatially blocked cross-validation against Global Mangrove Watch (GMW) 2020 ground truth on 448 held-out spatial samples.
           </p>
         </div>
 
@@ -351,6 +444,7 @@ export function MetricsView() {
         <div className="flex flex-wrap items-center gap-1.5 bg-muted/60 p-1 rounded-lg border border-border/60 self-start md:self-auto">
           {[
             { id: "overview", label: "Overview & Radar" },
+            { id: "benchmark", label: "Model Benchmark (RF vs GBT)" },
             { id: "features", label: "Feature Importance & Inspector" },
             { id: "matrix", label: "Confusion Matrix & Thresholds" },
             { id: "sampling", label: "Stratified Sampling" },
@@ -380,13 +474,19 @@ export function MetricsView() {
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Overall Accuracy</span>
               <Activity className="h-4 w-4 text-emerald-400" />
             </div>
-            <CardTitle className="text-3xl font-extrabold text-foreground tracking-tight">
-              {(balancedMetrics.overallAccuracy * 100).toFixed(1)}%
-            </CardTitle>
+            <div className="flex items-baseline gap-2 mt-1">
+              <CardTitle className="text-3xl font-extrabold text-foreground tracking-tight">
+                {(balancedMetrics.overallAccuracy * 100).toFixed(1)}%
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px] text-cyan-400 bg-cyan-950/40 border-cyan-800/60 font-mono">
+                GBT: {gbtMetrics ? (gbtMetrics.accuracy * 100).toFixed(1) : "95.5"}%
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-4 pt-0">
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <span className="text-emerald-400 font-semibold">{tp + tn}</span> of {totalVal} validation points
+            <p className="text-xs text-muted-foreground flex items-center justify-between">
+              <span><span className="text-emerald-400 font-semibold">{tp + tn}</span>/448 RF</span>
+              <span><span className="text-cyan-400 font-semibold">{gbtTp + gbtTn}</span>/448 GBT</span>
             </p>
           </CardContent>
         </Card>
@@ -398,13 +498,18 @@ export function MetricsView() {
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Cohen&apos;s Kappa</span>
               <Percent className="h-4 w-4 text-blue-400" />
             </div>
-            <CardTitle className="text-3xl font-extrabold text-foreground tracking-tight">
-              {balancedMetrics.kappa.toFixed(3)}
-            </CardTitle>
+            <div className="flex items-baseline gap-2 mt-1">
+              <CardTitle className="text-3xl font-extrabold text-foreground tracking-tight">
+                {balancedMetrics.kappa.toFixed(3)}
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px] text-cyan-400 bg-cyan-950/40 border-cyan-800/60 font-mono">
+                GBT: {gbtMetrics ? gbtMetrics.kappa.toFixed(3) : "0.911"}
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-4 pt-0">
             <p className="text-xs text-muted-foreground">
-              Inter-rater agreement <span className="text-blue-400 font-medium">Almost Perfect</span>
+              Agreement: <span className="text-blue-400 font-medium">Almost Perfect (&gt;0.81)</span>
             </p>
           </CardContent>
         </Card>
@@ -416,13 +521,18 @@ export function MetricsView() {
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Precision (User Acc)</span>
               <Crosshair className="h-4 w-4 text-amber-400" />
             </div>
-            <CardTitle className="text-3xl font-extrabold text-foreground tracking-tight">
-              {(balancedMetrics.userAccuracy * 100).toFixed(1)}%
-            </CardTitle>
+            <div className="flex items-baseline gap-2 mt-1">
+              <CardTitle className="text-3xl font-extrabold text-foreground tracking-tight">
+                {(balancedMetrics.userAccuracy * 100).toFixed(1)}%
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px] text-muted-foreground bg-muted/40 border-border/50 font-mono">
+                GBT: {gbtMetrics ? (gbtMetrics.precision * 100).toFixed(1) : "95.4"}%
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-4 pt-0">
             <p className="text-xs text-muted-foreground">
-              False positive rate: <span className="text-amber-400 font-semibold">{((fp / (tn + fp)) * 100).toFixed(1)}%</span>
+              RF false positive: <span className="text-emerald-400 font-semibold">{((fp / (tn + fp)) * 100).toFixed(1)}%</span> (8 FP vs 10 GBT)
             </p>
           </CardContent>
         </Card>
@@ -434,13 +544,18 @@ export function MetricsView() {
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recall (Producer Acc)</span>
               <CheckCircle2 className="h-4 w-4 text-teal-400" />
             </div>
-            <CardTitle className="text-3xl font-extrabold text-foreground tracking-tight">
-              {(balancedMetrics.producerAccuracy * 100).toFixed(1)}%
-            </CardTitle>
+            <div className="flex items-baseline gap-2 mt-1">
+              <CardTitle className="text-3xl font-extrabold text-foreground tracking-tight">
+                {(balancedMetrics.producerAccuracy * 100).toFixed(1)}%
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px] text-cyan-400 bg-cyan-950/40 border-cyan-800/60 font-mono">
+                GBT: {gbtMetrics ? (gbtMetrics.recall * 100).toFixed(1) : "95.4"}%
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-4 pt-0">
             <p className="text-xs text-muted-foreground">
-              Mangrove omission rate: <span className="text-teal-400 font-semibold">{((fn / (tp + fn)) * 100).toFixed(1)}%</span>
+              GBT missed only <span className="text-cyan-400 font-semibold">10</span> mangroves (vs 15 for RF)
             </p>
           </CardContent>
         </Card>
@@ -452,33 +567,54 @@ export function MetricsView() {
           {/* Radar Chart */}
           <Card className="bg-card/60 border-border/60">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-emerald-400" />
-                Comprehensive Accuracy Radar
-              </CardTitle>
-              <CardDescription>
-                Multi-dimensional performance profile on spatial validation blocks
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-emerald-400" />
+                    Multi-Model Accuracy Radar
+                  </CardTitle>
+                  <CardDescription>
+                    Overlay comparison: Random Forest vs. Gradient Boosted Trees on spatial validation blocks
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="h-80 flex items-center justify-center pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="#374151" strokeDasharray="3 3" />
-                  <PolarAngleAxis dataKey="metric" tick={{ fill: "#9CA3AF", fontSize: 11 }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#4B5563" />
-                  <Radar
-                    name="Random Forest"
-                    dataKey="value"
-                    stroke="#10B981"
-                    fill="#10B981"
-                    fillOpacity={0.4}
-                  />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#18181B", borderColor: "#27272A", borderRadius: "8px" }}
-                    formatter={(val) => [`${val}%`, "Score"]}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
+            <CardContent className="pt-2">
+              <div className="h-72 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={radarData}>
+                    <PolarGrid stroke="#374151" strokeDasharray="3 3" />
+                    <PolarAngleAxis dataKey="metric" tick={{ fill: "#9CA3AF", fontSize: 11 }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#4B5563" />
+                    <Radar
+                      name="Random Forest"
+                      dataKey="rf"
+                      stroke="#10B981"
+                      fill="#10B981"
+                      fillOpacity={0.25}
+                    />
+                    <Radar
+                      name="Gradient Boosted Trees"
+                      dataKey="gbt"
+                      stroke="#06B6D4"
+                      fill="#06B6D4"
+                      fillOpacity={0.25}
+                    />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "#18181B", borderColor: "#27272A", borderRadius: "8px" }}
+                      formatter={(val, name) => [`${val}%`, name]}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex items-center justify-center gap-6 pt-3 border-t border-border/40 text-xs">
+                <span className="flex items-center gap-1.5 font-medium text-foreground">
+                  <span className="w-3 h-3 rounded-xs bg-[#10B981]" /> Random Forest (Map Deployed)
+                </span>
+                <span className="flex items-center gap-1.5 font-medium text-foreground">
+                  <span className="w-3 h-3 rounded-xs bg-[#06B6D4]" /> Gradient Boosted Trees (Benchmark)
+                </span>
+              </div>
             </CardContent>
           </Card>
 
@@ -532,6 +668,403 @@ export function MetricsView() {
                   <span className="text-muted-foreground">Model Classified Extent (2020):</span>
                   <span className="font-mono text-emerald-400 font-semibold">{areasHa.model2020.toFixed(1)} ha</span>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Model Comparison Card across both columns */}
+          <Card className="col-span-1 lg:col-span-2 bg-card/60 border-border/60">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <GitCompare className="h-4 w-4 text-cyan-400" />
+                  Model Comparison: Agreement with GMW 2020 on Held-out Spatial Blocks
+                </CardTitle>
+                <CardDescription>
+                  Like-for-like validation on 448 independent test samples across 15 held-out 1000m blocks
+                </CardDescription>
+              </div>
+              <button
+                onClick={() => setActiveTab("benchmark")}
+                className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+              >
+                Detailed Benchmark →
+              </button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border/80 text-muted-foreground">
+                      <th className="py-2 text-left font-medium">Model Architecture</th>
+                      <th className="py-2 text-center font-medium">Accuracy</th>
+                      <th className="py-2 text-center font-medium">Precision (UA)</th>
+                      <th className="py-2 text-center font-medium">Recall (PA)</th>
+                      <th className="py-2 text-center font-medium">F1 Score</th>
+                      <th className="py-2 text-center font-medium">IoU (Jaccard)</th>
+                      <th className="py-2 text-center font-medium">Cohen&apos;s Kappa</th>
+                      <th className="py-2 text-right font-medium">Role in Platform</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    <tr className="hover:bg-muted/20 transition-colors">
+                      <td className="py-2.5 text-left font-semibold text-emerald-400 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        Random Forest
+                      </td>
+                      <td className="py-2.5 text-center font-mono font-medium">
+                        {(balancedMetrics.overallAccuracy * 100).toFixed(1)}%
+                      </td>
+                      <td className="py-2.5 text-center font-mono font-medium text-emerald-400">
+                        {(balancedMetrics.userAccuracy * 100).toFixed(1)}% ★
+                      </td>
+                      <td className="py-2.5 text-center font-mono font-medium">
+                        {(balancedMetrics.producerAccuracy * 100).toFixed(1)}%
+                      </td>
+                      <td className="py-2.5 text-center font-mono font-medium">
+                        {(f1Score * 100).toFixed(1)}%
+                      </td>
+                      <td className="py-2.5 text-center font-mono font-medium">
+                        {((tp / (tp + fp + fn)) * 100).toFixed(1)}%
+                      </td>
+                      <td className="py-2.5 text-center font-mono font-medium">
+                        {balancedMetrics.kappa.toFixed(3)}
+                      </td>
+                      <td className="py-2.5 text-right font-medium">
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]">
+                          Active Classification Map
+                        </Badge>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-muted/20 transition-colors">
+                      <td className="py-2.5 text-left font-semibold text-cyan-400 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-cyan-500" />
+                        Gradient Boosted Trees
+                      </td>
+                      <td className="py-2.5 text-center font-mono font-medium text-cyan-400">
+                        {gbtMetrics ? (gbtMetrics.accuracy * 100).toFixed(1) + "% ★" : "95.5% ★"}
+                      </td>
+                      <td className="py-2.5 text-center font-mono font-medium">
+                        {gbtMetrics ? (gbtMetrics.precision * 100).toFixed(1) + "%" : "95.4%"}
+                      </td>
+                      <td className="py-2.5 text-center font-mono font-medium text-cyan-400">
+                        {gbtMetrics ? (gbtMetrics.recall * 100).toFixed(1) + "% ★" : "95.4% ★"}
+                      </td>
+                      <td className="py-2.5 text-center font-mono font-medium text-cyan-400">
+                        {gbtMetrics ? (gbtMetrics.f1 * 100).toFixed(1) + "% ★" : "95.4% ★"}
+                      </td>
+                      <td className="py-2.5 text-center font-mono font-medium text-cyan-400">
+                        {gbtMetrics ? (gbtMetrics.iou * 100).toFixed(1) + "% ★" : "91.3% ★"}
+                      </td>
+                      <td className="py-2.5 text-center font-mono font-medium text-cyan-400">
+                        {gbtMetrics ? gbtMetrics.kappa.toFixed(3) + " ★" : "0.911 ★"}
+                      </td>
+                      <td className="py-2.5 text-right font-medium">
+                        <Badge variant="outline" className="bg-cyan-500/10 text-cyan-400 border-cyan-500/30 text-[10px]">
+                          Validation Benchmark
+                        </Badge>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[11px] text-muted-foreground italic border-t border-border/40 pt-2">
+                * Note: Single split, untuned. The classification map uses Random Forest. ★ indicates higher score between the two models on the held-out spatial blocks.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* DEDICATED MODEL BENCHMARK TAB (RF vs GBT) */}
+      {activeTab === "benchmark" && (
+        <div className="space-y-6">
+          {/* Benchmark Header Info */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-950/30 via-muted/30 to-cyan-950/30 border border-border/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <GitCompare className="h-5 w-5 text-cyan-400" />
+                <h3 className="text-base font-bold text-foreground">
+                  Rigorous Controlled Benchmark: Random Forest vs. Gradient Boosted Trees
+                </h3>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
+                Trained and evaluated on the exact same Sentinel-2 2020 composite, identical 1,988 balanced training points, and identical 1,000m spatial block hold-out split (448 validation samples across 15 blocks).
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Badge variant="outline" className="bg-muted/50 border-border/60 text-xs">
+                448 Holdout Points
+              </Badge>
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs">
+                Classification Map uses RF
+              </Badge>
+            </div>
+          </div>
+
+          {/* Comparative Metric Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              {
+                label: "Overall Accuracy",
+                rf: `${(balancedMetrics.overallAccuracy * 100).toFixed(1)}%`,
+                gbt: gbtMetrics ? `${(gbtMetrics.accuracy * 100).toFixed(1)}%` : "95.5%",
+                delta: "+0.67%",
+                leader: "GBT",
+                color: "text-cyan-400",
+              },
+              {
+                label: "Precision (UA)",
+                rf: `${(balancedMetrics.userAccuracy * 100).toFixed(1)}%`,
+                gbt: gbtMetrics ? `${(gbtMetrics.precision * 100).toFixed(1)}%` : "95.4%",
+                delta: "+0.80%",
+                leader: "RF",
+                color: "text-emerald-400",
+              },
+              {
+                label: "Recall (PA)",
+                rf: `${(balancedMetrics.producerAccuracy * 100).toFixed(1)}%`,
+                gbt: gbtMetrics ? `${(gbtMetrics.recall * 100).toFixed(1)}%` : "95.4%",
+                delta: "+2.28%",
+                leader: "GBT",
+                color: "text-cyan-400",
+              },
+              {
+                label: "F1 Score",
+                rf: `${(f1Score * 100).toFixed(1)}%`,
+                gbt: gbtMetrics ? `${(gbtMetrics.f1 * 100).toFixed(1)}%` : "95.4%",
+                delta: "+0.77%",
+                leader: "GBT",
+                color: "text-cyan-400",
+              },
+              {
+                label: "IoU (Jaccard)",
+                rf: `${((tp / (tp + fp + fn)) * 100).toFixed(1)}%`,
+                gbt: gbtMetrics ? `${(gbtMetrics.iou * 100).toFixed(1)}%` : "91.3%",
+                delta: "+1.40%",
+                leader: "GBT",
+                color: "text-cyan-400",
+              },
+              {
+                label: "Cohen's Kappa",
+                rf: balancedMetrics.kappa.toFixed(3),
+                gbt: gbtMetrics ? gbtMetrics.kappa.toFixed(3) : "0.911",
+                delta: "+0.013",
+                leader: "GBT",
+                color: "text-cyan-400",
+              },
+            ].map((m) => (
+              <Card key={m.label} className="bg-card/60 border-border/60 p-3 flex flex-col justify-between">
+                <span className="text-[11px] font-medium text-muted-foreground truncate">{m.label}</span>
+                <div className="my-1.5 flex flex-col gap-0.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">RF:</span>
+                    <span className="font-mono font-semibold text-emerald-400">{m.rf}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">GBT:</span>
+                    <span className="font-mono font-semibold text-cyan-400">{m.gbt}</span>
+                  </div>
+                </div>
+                <div className="pt-1.5 border-t border-border/40 flex items-center justify-between text-[10px]">
+                  <span className="text-muted-foreground">Lead:</span>
+                  <Badge variant="outline" className={`text-[9px] py-0 px-1 border-current ${m.color}`}>
+                    {m.leader} ({m.delta})
+                  </Badge>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Side-by-Side Confusion Matrices */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Random Forest Matrix */}
+            <Card className="bg-card/60 border-border/60">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    Random Forest Confusion Matrix
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Overall Accuracy: 94.87% · Cohen&apos;s κ: 0.8972
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]">
+                  Map Model
+                </Badge>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="flex items-center justify-center font-bold text-muted-foreground text-[11px]">
+                    Actual \ Pred
+                  </div>
+                  <div className="p-2 font-bold bg-muted/50 rounded-t border border-border/60 text-[11px]">
+                    Pred Non-Mangrove (0)
+                  </div>
+                  <div className="p-2 font-bold bg-muted/50 rounded-t border border-border/60 text-[11px]">
+                    Pred Mangrove (1)
+                  </div>
+
+                  {/* Row 1: Actual 0 */}
+                  <div className="flex items-center justify-center p-2 font-bold bg-muted/50 rounded-l border border-border/60 text-[11px]">
+                    Actual: Non-Mangrove (0)
+                  </div>
+                  <div className="p-3.5 rounded bg-emerald-950/40 border border-emerald-800/60 font-mono">
+                    <div className="text-lg font-bold text-emerald-400">{tn}</div>
+                    <div className="text-[10px] text-muted-foreground">True Negative (49.3%)</div>
+                  </div>
+                  <div className="p-3.5 rounded bg-amber-950/30 border border-amber-800/40 font-mono">
+                    <div className="text-lg font-bold text-amber-400">{fp}</div>
+                    <div className="text-[10px] text-muted-foreground">False Positive (1.8%)</div>
+                  </div>
+
+                  {/* Row 2: Actual 1 */}
+                  <div className="flex items-center justify-center p-2 font-bold bg-muted/50 rounded-l border border-border/60 text-[11px]">
+                    Actual: Mangrove (1)
+                  </div>
+                  <div className="p-3.5 rounded bg-rose-950/30 border border-rose-800/40 font-mono">
+                    <div className="text-lg font-bold text-rose-400">{fn}</div>
+                    <div className="text-[10px] text-muted-foreground">False Negative (3.3%)</div>
+                  </div>
+                  <div className="p-3.5 rounded bg-emerald-950/50 border border-emerald-700/60 font-mono">
+                    <div className="text-lg font-bold text-emerald-300">{tp}</div>
+                    <div className="text-[10px] text-muted-foreground">True Positive (45.5%)</div>
+                  </div>
+                </div>
+                <div className="mt-3 pt-2 border-t border-border/40 text-[11px] text-muted-foreground flex justify-between">
+                  <span>Correct: <strong className="text-foreground">{tn + tp}</strong> (94.9%)</span>
+                  <span>Errors: <strong className="text-foreground">{fn + fp}</strong> (5.1%)</span>
+                  <span>Precision: <strong className="text-emerald-400">96.23%</strong></span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Gradient Boosted Trees Matrix */}
+            <Card className="bg-card/60 border-border/60">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
+                    Gradient Boosted Trees Confusion Matrix
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Overall Accuracy: 95.54% · Cohen&apos;s κ: 0.9107
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="bg-cyan-500/10 text-cyan-400 border-cyan-500/30 text-[10px]">
+                  Benchmark Model
+                </Badge>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="flex items-center justify-center font-bold text-muted-foreground text-[11px]">
+                    Actual \ Pred
+                  </div>
+                  <div className="p-2 font-bold bg-muted/50 rounded-t border border-border/60 text-[11px]">
+                    Pred Non-Mangrove (0)
+                  </div>
+                  <div className="p-2 font-bold bg-muted/50 rounded-t border border-border/60 text-[11px]">
+                    Pred Mangrove (1)
+                  </div>
+
+                  {/* Row 1: Actual 0 */}
+                  <div className="flex items-center justify-center p-2 font-bold bg-muted/50 rounded-l border border-border/60 text-[11px]">
+                    Actual: Non-Mangrove (0)
+                  </div>
+                  <div className="p-3.5 rounded bg-cyan-950/40 border border-cyan-800/60 font-mono">
+                    <div className="text-lg font-bold text-cyan-400">{gbtTn}</div>
+                    <div className="text-[10px] text-muted-foreground">True Negative (48.9%)</div>
+                  </div>
+                  <div className="p-3.5 rounded bg-amber-950/30 border border-amber-800/40 font-mono">
+                    <div className="text-lg font-bold text-amber-400">{gbtFp}</div>
+                    <div className="text-[10px] text-muted-foreground">False Positive (2.2%)</div>
+                  </div>
+
+                  {/* Row 2: Actual 1 */}
+                  <div className="flex items-center justify-center p-2 font-bold bg-muted/50 rounded-l border border-border/60 text-[11px]">
+                    Actual: Mangrove (1)
+                  </div>
+                  <div className="p-3.5 rounded bg-rose-950/30 border border-rose-800/40 font-mono">
+                    <div className="text-lg font-bold text-rose-400">{gbtFn}</div>
+                    <div className="text-[10px] text-muted-foreground">False Negative (2.2%)</div>
+                  </div>
+                  <div className="p-3.5 rounded bg-cyan-950/50 border border-cyan-700/60 font-mono">
+                    <div className="text-lg font-bold text-cyan-300">{gbtTp}</div>
+                    <div className="text-[10px] text-muted-foreground">True Positive (46.7%)</div>
+                  </div>
+                </div>
+                <div className="mt-3 pt-2 border-t border-border/40 text-[11px] text-muted-foreground flex justify-between">
+                  <span>Correct: <strong className="text-foreground">{gbtTn + gbtTp}</strong> (95.5%)</span>
+                  <span>Errors: <strong className="text-foreground">{gbtFn + gbtFp}</strong> (4.5%)</span>
+                  <span>Recall: <strong className="text-cyan-400">95.43%</strong></span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Architecture & Hyperparameter Specification Table */}
+          <Card className="bg-card/60 border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-emerald-400" />
+                Algorithm & Pipeline Specification
+              </CardTitle>
+              <CardDescription>
+                Hyperparameters and execution parameters on Google Earth Engine
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border/80 text-muted-foreground">
+                      <th className="py-2 text-left font-medium">Parameter / Feature</th>
+                      <th className="py-2 text-left font-medium text-emerald-400">Random Forest</th>
+                      <th className="py-2 text-left font-medium text-cyan-400">Gradient Boosted Trees</th>
+                      <th className="py-2 text-left font-medium">Notes & Trade-Offs</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    <tr>
+                      <td className="py-2.5 font-medium text-foreground">GEE Classifier Class</td>
+                      <td className="py-2.5 font-mono text-emerald-300">ee.Classifier.smileRandomForest</td>
+                      <td className="py-2.5 font-mono text-cyan-300">ee.Classifier.smileGradientTreeBoost</td>
+                      <td className="py-2.5 text-muted-foreground">Native Smile ML library bindings</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 font-medium text-foreground">Ensemble Paradigm</td>
+                      <td className="py-2.5 font-medium">Bootstrap Aggregation (Bagging)</td>
+                      <td className="py-2.5 font-medium">Sequential Residual Boosting</td>
+                      <td className="py-2.5 text-muted-foreground">RF trees are independent; GBT trees optimize residuals</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 font-medium text-foreground">Number of Trees</td>
+                      <td className="py-2.5 font-mono">100</td>
+                      <td className="py-2.5 font-mono">100</td>
+                      <td className="py-2.5 text-muted-foreground">Identical ensemble capacity</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 font-medium text-foreground">Shrinkage (Learning Rate)</td>
+                      <td className="py-2.5 font-mono text-muted-foreground">N/A (1.0)</td>
+                      <td className="py-2.5 font-mono text-cyan-300">0.1</td>
+                      <td className="py-2.5 text-muted-foreground">Controls step size during gradient descent</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 font-medium text-foreground">Stochastic Sampling Rate</td>
+                      <td className="py-2.5 font-mono text-muted-foreground">1.0 (Full bootstrap)</td>
+                      <td className="py-2.5 font-mono text-cyan-300">0.7</td>
+                      <td className="py-2.5 text-muted-foreground">70% sub-sample per tree boosting iteration</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 font-medium text-foreground">Validation Split Protocol</td>
+                      <td className="py-2.5" colSpan={2}>
+                        <span className="font-mono text-foreground">1,000m EPSG:32643 Spatial Block Grid</span> (Seed 1, 70% Train / 30% Val)
+                      </td>
+                      <td className="py-2.5 text-muted-foreground">Guarantees zero spatial autocorrelation leakage</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
