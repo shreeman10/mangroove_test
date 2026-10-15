@@ -1,0 +1,105 @@
+{
+  "timestamp": "2026-10-15T04:29:56.441Z",
+  "note": "Agreement with GMW 2020 on held-out spatial blocks, single split, untuned",
+  "dataset": {
+    "trainSize": 1540,
+    "valSize": 448,
+    "trainClassCounts": {
+      "0": 765,
+      "1": 775
+    },
+    "valClassCounts": {
+      "0": 229,
+      "1": 219
+    },
+    "bands": [
+      "B2",
+      "B3",
+      "B4",
+      "B8",
+      "B11",
+      "B12",
+      "NDVI",
+      "MNDWI",
+      "NDWI"
+    ],
+    "classProperty": "mangrove",
+    "splitSeed": 1
+  },
+  "models": {
+    "randomForest": {
+      "name": "Random Forest",
+      "hyperparameters": {
+        "numberOfTrees": 100,
+        "seed": 42
+      },
+      "metrics": {
+        "accuracy": 0.9486607142857143,
+        "precision": 0.9622641509433962,
+        "recall": 0.9315068493150684,
+        "f1": 0.9466357308584686,
+        "iou": 0.8986784140969163,
+        "kappa": 0.8971984994812037
+      },
+      "confusionMatrix": [
+        [
+          221,
+          8
+        ],
+        [
+          15,
+          204
+        ]
+      ],
+      "order": [
+        0,
+        1
+      ],
+      "details": {
+        "tp": 204,
+        "fp": 8,
+        "fn": 15,
+        "tn": 221,
+        "total": 448
+      }
+    },
+    "gradientBoostedTrees": {
+      "name": "Gradient Boosted Trees",
+      "hyperparameters": {
+        "numberOfTrees": 100,
+        "shrinkage": 0.1,
+        "samplingRate": 0.7,
+        "seed": 42
+      },
+      "metrics": {
+        "accuracy": 0.9553571428571429,
+        "precision": 0.954337899543379,
+        "recall": 0.954337899543379,
+        "f1": 0.954337899543379,
+        "iou": 0.9126637554585153,
+        "kappa": 0.9106697772726368
+      },
+      "confusionMatrix": [
+        [
+          219,
+          10
+        ],
+        [
+          10,
+          209
+        ]
+      ],
+      "order": [
+        0,
+        1
+      ],
+      "details": {
+        "tp": 209,
+        "fp": 10,
+        "fn": 10,
+        "tn": 219,
+        "total": 448
+      }
+    }
+  }
+}

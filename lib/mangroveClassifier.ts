@@ -1,9 +1,9 @@
 import { evaluate } from "@/lib/gee"
 import fs from "fs"
 import path from "path"
-const MANGROVE_ASSET = "projects/sat-io/open-datasets/GMW/extent/GMW_V3"
-const CLASSIFICATION_BANDS = ["B2", "B3", "B4", "B8", "B11", "B12", "NDVI", "MNDWI", "NDWI"]
-const CLASS_PROPERTY = "mangrove"
+export const MANGROVE_ASSET = "projects/sat-io/open-datasets/GMW/extent/GMW_V3"
+export const CLASSIFICATION_BANDS = ["B2", "B3", "B4", "B8", "B11", "B12", "NDVI", "MNDWI", "NDWI"]
+export const CLASS_PROPERTY = "mangrove"
 
 export let POSITIVE_SAMPLES = 1000
 export let NEGATIVE_SAMPLES_TOTAL = 1000
@@ -83,6 +83,51 @@ export function buildComposite(ee: any, geometry: any, year: string) {
     .select(CLASSIFICATION_BANDS)
 
   return { s2Collection, augmentedImage }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getTrainValSplit(ee: any, geometry: any, seed = 1) {
+  const metaPath = path.join(process.cwd(), "data", "mangrove-model-meta.json");
+  if (!fs.existsSync(metaPath)) {
+    throw new Error("data/mangrove-model-meta.json not found");
+  }
+  const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
+
+  const gmwCollection = ee.ImageCollection(MANGROVE_ASSET).filter(ee.Filter.calendarRange(2020, 2020, "year"));
+  const mangroveRef = gmwCollection.first().select(["b1"], [CLASS_PROPERTY]).clip(geometry);
+  const mangroveBuffered = mangroveRef.unmask(0).focalMax(30, 'circle', 'meters');
+  
+  const esa = ee.Image("ESA/WorldCover/v100/2020").clip(geometry);
+  const esaMasked = esa.updateMask(mangroveBuffered.eq(0).and(esa.neq(95)));
+
+  const validClasses = Object.keys(meta.negativeSampleRequested);
+  const classValues = validClasses.map(Number);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const classPoints = validClasses.map((c: any) => meta.negativeSampleRequested[c]);
+
+  const negativePoints = esaMasked.stratifiedSample({
+    numPoints: 0, classBand: "Map", region: geometry, scale: 10,
+    classValues, classPoints, geometries: true, seed: 42
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }).map((f: any) => f.set(CLASS_PROPERTY, 0));
+
+  const positivePoints = mangroveRef.updateMask(mangroveRef.eq(1)).stratifiedSample({
+    numPoints: meta.constants.positiveSamples, classBand: CLASS_PROPERTY, region: geometry, scale: 10,
+    geometries: true, seed: 42
+  });
+
+  const trainingPoints = positivePoints.merge(negativePoints);
+  const { augmentedImage: s2Image2020 } = buildComposite(ee, geometry, "2020");
+  const randomGrid = ee.Image.random(seed).reproject(ee.Projection('EPSG:32643').atScale(1000)).rename('grid_random');
+  
+  const trainingDataSplit = s2Image2020.addBands(randomGrid).sampleRegions({
+    collection: trainingPoints, properties: [CLASS_PROPERTY], scale: 10, tileScale: 4
+  });
+
+  const trainSet = trainingDataSplit.filter(ee.Filter.lt('grid_random', 0.7));
+  const valSet = trainingDataSplit.filter(ee.Filter.gte('grid_random', 0.7));
+
+  return { trainSet, valSet, trainingDataSplit, s2Image2020, trainingPoints, meta };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

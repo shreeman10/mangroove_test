@@ -1,0 +1,94 @@
+{
+  "generatedAt": "2026-09-30T20:14:25.284Z",
+  "constants": {
+    "trees": 100,
+    "seed": 42,
+    "blockSize": 1000,
+    "positiveSamples": 994,
+    "negativeSamplesTotal": 994
+  },
+  "balancedMetrics": {
+    "overallAccuracy": 0.9486607142857143,
+    "kappa": 0.8971984994812037,
+    "producerAccuracy": 0.9315068493150684,
+    "userAccuracy": 0.9622641509433962,
+    "confusionMatrix": [
+      [
+        221,
+        8
+      ],
+      [
+        15,
+        204
+      ]
+    ]
+  },
+  "multiSeedMeanStd": {
+    "oa": {
+      "mean": 0.9575759164346647,
+      "std": 0.011567129474098888
+    },
+    "kappa": {
+      "mean": 0.9134354768912484,
+      "std": 0.025760017747168875
+    },
+    "pa": {
+      "mean": 0.943298794662695,
+      "std": 0.01890098604079423
+    },
+    "ua": {
+      "mean": 0.9782037871407079,
+      "std": 0.013122719691550076
+    }
+  },
+  "wallToWallMetrics": {
+    "oa": null,
+    "kappa": null,
+    "pa": null,
+    "ua": null,
+    "prevalence": null,
+    "matrix": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ]
+  },
+  "negativeSampleRequested": {
+    "10": 142,
+    "30": 142,
+    "40": 142,
+    "50": 142,
+    "60": 142,
+    "80": 142,
+    "90": 142
+  },
+  "negativeSampleDistribution": {
+    "10": 142,
+    "30": 142,
+    "40": 142,
+    "50": 142,
+    "60": 142,
+    "80": 142,
+    "90": 142
+  },
+  "blockInfo": {
+    "totalBlocks": 70,
+    "trainBlocks": 55,
+    "valBlocks": 15,
+    "blockSize": 1000
+  },
+  "trainingPointCounts": {
+    "train": 1540,
+    "val": 448,
+    "total": 1988
+  },
+  "areasHa": {
+    "gmw2020": 1213.2060185337928,
+    "model2020": 1626.979919064771
+  }
+}

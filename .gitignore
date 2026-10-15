@@ -49,6 +49,8 @@ secrets/
 !package.json
 !package-lock.json
 !tsconfig.json
+!components.json
+!data/*.json
 
 
 demo.txt

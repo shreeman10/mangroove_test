@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card"
 import type { ClassifyDebug, MangroveStats } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import gbtMeta from "@/data/gbt-meta.json"
 
 const BASELINE_YEAR = "2020"
 
@@ -29,6 +30,13 @@ const SPECTRAL_ROWS: { key: string; label: string }[] = [
 function formatBand(value?: number): string {
   if (value === undefined || Number.isNaN(value)) return "—"
   return Math.abs(value) < 2 ? value.toFixed(2) : Math.round(value).toLocaleString()
+}
+
+function formatScore(val?: unknown): string {
+  if (typeof val === "number" && Number.isFinite(val)) {
+    return `${(val * 100).toFixed(1)}%`
+  }
+  return "n/a"
 }
 
 function healthStatus(ndvi: number): { label: string; className: string } {
@@ -180,6 +188,79 @@ export function StatsPanel({
               ))}
             </tbody>
           </table>
+
+          {/* Model comparison */}
+          <div className="mt-3 border-t border-border pt-3">
+            <h4 className="text-xs font-semibold text-foreground">
+              Model comparison: agreement with GMW 2020 on held-out spatial blocks
+            </h4>
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground">
+                    <th className="py-1 text-left font-medium">Model</th>
+                    <th className="py-1 text-right font-medium">Accuracy</th>
+                    <th className="py-1 text-right font-medium">Precision</th>
+                    <th className="py-1 text-right font-medium">Recall</th>
+                    <th className="py-1 text-right font-medium">F1</th>
+                    <th className="py-1 text-right font-medium">IoU</th>
+                    <th className="py-1 text-right font-medium">Kappa</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  <tr>
+                    <td className="py-1.5 text-left font-medium text-foreground whitespace-nowrap">
+                      Random Forest
+                    </td>
+                    <td className="py-1.5 text-right font-mono">
+                      {formatScore(gbtMeta?.models?.randomForest?.metrics?.accuracy)}
+                    </td>
+                    <td className="py-1.5 text-right font-mono">
+                      {formatScore(gbtMeta?.models?.randomForest?.metrics?.precision)}
+                    </td>
+                    <td className="py-1.5 text-right font-mono">
+                      {formatScore(gbtMeta?.models?.randomForest?.metrics?.recall)}
+                    </td>
+                    <td className="py-1.5 text-right font-mono">
+                      {formatScore(gbtMeta?.models?.randomForest?.metrics?.f1)}
+                    </td>
+                    <td className="py-1.5 text-right font-mono">
+                      {formatScore(gbtMeta?.models?.randomForest?.metrics?.iou)}
+                    </td>
+                    <td className="py-1.5 text-right font-mono">
+                      {formatScore(gbtMeta?.models?.randomForest?.metrics?.kappa)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 text-left font-medium text-foreground whitespace-nowrap">
+                      Gradient Boosted Trees
+                    </td>
+                    <td className="py-1.5 text-right font-mono">
+                      {formatScore(gbtMeta?.models?.gradientBoostedTrees?.metrics?.accuracy)}
+                    </td>
+                    <td className="py-1.5 text-right font-mono">
+                      {formatScore(gbtMeta?.models?.gradientBoostedTrees?.metrics?.precision)}
+                    </td>
+                    <td className="py-1.5 text-right font-mono">
+                      {formatScore(gbtMeta?.models?.gradientBoostedTrees?.metrics?.recall)}
+                    </td>
+                    <td className="py-1.5 text-right font-mono">
+                      {formatScore(gbtMeta?.models?.gradientBoostedTrees?.metrics?.f1)}
+                    </td>
+                    <td className="py-1.5 text-right font-mono">
+                      {formatScore(gbtMeta?.models?.gradientBoostedTrees?.metrics?.iou)}
+                    </td>
+                    <td className="py-1.5 text-right font-mono">
+                      {formatScore(gbtMeta?.models?.gradientBoostedTrees?.metrics?.kappa)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-1.5 text-[10px] text-muted-foreground">
+              Single split, untuned. The classification map uses Random Forest.
+            </p>
+          </div>
           {debug && (
             <div className="mt-2 border-t border-border pt-2 text-[10px] text-muted-foreground flex flex-col gap-1">
               <p>
