@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation"
 
 import { MapPanel } from "@/components/dashboard/map-panel"
 import { StatsPanel } from "@/components/dashboard/stats-panel"
-import { TimeSeriesDrawer } from "@/components/dashboard/time-series-drawer"
 import { RegionCompareView } from "@/components/dashboard/region-compare-view"
 import { ChangeDetectionView } from "@/components/dashboard/change-detection-view"
 import { MetricsView } from "@/components/dashboard/metrics-view"
@@ -334,11 +333,6 @@ export default function DashboardPage() {
             </aside>
           </>
         )}
-
-        {/* Time Series Drawer - anchored at bottom of main area */}
-        <div className="absolute bottom-3 left-3 z-20 print:hidden">
-          <TimeSeriesDrawer region={region} />
-        </div>
       </main>
 
     </div>

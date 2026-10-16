@@ -149,12 +149,7 @@ export default function LandingPage() {
           </div>
 
           <div className="hidden md:flex items-center">
-            <a
-              href="#"
-              className="text-sm font-medium text-white/70 hover:text-white transition-colors"
-            >
-              Features
-            </a>
+            
           </div>
 
           <div className="flex items-center gap-4">

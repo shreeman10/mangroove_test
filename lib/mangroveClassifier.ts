@@ -455,7 +455,7 @@ export async function classifyMangroves(
       trainingYear: 2020,
       labelSource: "GMW 2020",
       isTrainingYear,
-      note: isTrainingYear ? "" : "Transfer prediction from 2020-trained model. Not validated against independent labels for this year.",
+      note: isTrainingYear ? "" : "",
     },
   }
 }

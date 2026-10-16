@@ -182,24 +182,9 @@ export function StatsPanel({
           </table>
           {debug && (
             <div className="mt-2 border-t border-border pt-2 text-[10px] text-muted-foreground flex flex-col gap-1">
-              <p>
-                Random Forest ×{debug.constants?.trees || 100} trees · {debug.totalTrainingPoints} training points ({debug.trainingYear} {debug.labelSource}) ·{" "}
-                {debug.s2ImageCount} Sentinel-2 scenes
-              </p>
-              <p>
-                Agreement with GMW 2020 on held-out spatial blocks:
-                {((debug.multiSeedMeanStd?.oa?.mean ?? 0) * 100)?.toFixed(1) ?? (debug.validation.overallAccuracy * 100).toFixed(1)}% OA
-                (±{((debug.multiSeedMeanStd?.oa?.std ?? 0) * 100)?.toFixed(1) ?? "0.0"}%)
-              </p>
-              {debug.wallToWallMetrics && (
-                <p>
-                  Pixel-level agreement with GMW 2020 (held-out blocks, prevalence-weighted):
-                  {(debug.wallToWallMetrics.oa * 100).toFixed(1)}% OA · PA={(debug.wallToWallMetrics.pa * 100).toFixed(1)}% · UA={(debug.wallToWallMetrics.ua * 100).toFixed(1)}%
-                </p>
-              )}
-              <p className="italic">
-                * Note: The deployed model is retrained on all data. These metrics describe the validation model.
-              </p>
+             
+              
+             
               {!debug.isTrainingYear && (
                 <p className="text-yellow-600 dark:text-yellow-500">
                   {debug.note}
