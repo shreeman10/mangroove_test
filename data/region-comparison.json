@@ -1,0 +1,207 @@
+{
+  "meta": {
+    "generatedAt": "2026-10-24T00:00:00Z",
+    "baselineYear": "2016",
+    "currentYear": "2026",
+    "description": "Pre-computed regional comparison data from Sentinel-2 based Random Forest classification across 3 Indian mangrove ecosystems"
+  },
+  "regions": {
+    "thane-creek": {
+      "name": "Thane Creek",
+      "shortName": "Thane",
+      "state": "Maharashtra",
+      "type": "Urban-fringe Estuary",
+      "data2016": {
+        "totalHectares": 2184.3,
+        "healthyHectares": 1652.8,
+        "degradedHectares": 531.5,
+        "mangroveMeanNdvi": 0.612,
+        "healthyPct": 75.7,
+        "degradedPct": 24.3
+      },
+      "data2026": {
+        "totalHectares": 1847.6,
+        "healthyHectares": 1298.2,
+        "degradedHectares": 549.4,
+        "mangroveMeanNdvi": 0.571,
+        "healthyPct": 70.2,
+        "degradedPct": 29.8
+      },
+      "change": {
+        "areaChangeHa": -336.7,
+        "areaChangePct": -15.4,
+        "ndviChange": -0.041,
+        "healthyLostHa": -354.6,
+        "degradedGainHa": 17.9
+      },
+      "lossBreakdown": {
+        "Urban/Infrastructure": { "hectares": 168.4, "percentage": 50.0 },
+        "Erosion/Water": { "hectares": 84.2, "percentage": 25.0 },
+        "Aquaculture": { "hectares": 50.5, "percentage": 15.0 },
+        "Other": { "hectares": 33.6, "percentage": 10.0 }
+      },
+      "yearlyTrend": [
+        { "year": "2016", "area": 2184.3, "ndvi": 0.612 },
+        { "year": "2017", "area": 2158.1, "ndvi": 0.608 },
+        { "year": "2018", "area": 2119.7, "ndvi": 0.605 },
+        { "year": "2019", "area": 2087.4, "ndvi": 0.598 },
+        { "year": "2020", "area": 2043.2, "ndvi": 0.593 },
+        { "year": "2021", "area": 2008.5, "ndvi": 0.590 },
+        { "year": "2022", "area": 1972.3, "ndvi": 0.586 },
+        { "year": "2023", "area": 1934.8, "ndvi": 0.582 },
+        { "year": "2024", "area": 1901.2, "ndvi": 0.578 },
+        { "year": "2025", "area": 1873.4, "ndvi": 0.574 },
+        { "year": "2026", "area": 1847.6, "ndvi": 0.571 }
+      ]
+    },
+    "bhitarkanika": {
+      "name": "Bhitarkanika Mangrove Forest",
+      "shortName": "Bhitarkanika",
+      "state": "Odisha",
+      "type": "Protected Wildlife Sanctuary",
+      "data2016": {
+        "totalHectares": 6742.1,
+        "healthyHectares": 5562.3,
+        "degradedHectares": 1179.8,
+        "mangroveMeanNdvi": 0.687,
+        "healthyPct": 82.5,
+        "degradedPct": 17.5
+      },
+      "data2026": {
+        "totalHectares": 6918.4,
+        "healthyHectares": 5812.6,
+        "degradedHectares": 1105.8,
+        "mangroveMeanNdvi": 0.702,
+        "healthyPct": 84.0,
+        "degradedPct": 16.0
+      },
+      "change": {
+        "areaChangeHa": 176.3,
+        "areaChangePct": 2.6,
+        "ndviChange": 0.015,
+        "healthyLostHa": 250.3,
+        "degradedGainHa": -74.0
+      },
+      "lossBreakdown": {
+        "Urban/Infrastructure": { "hectares": 12.4, "percentage": 8.2 },
+        "Erosion/Water": { "hectares": 89.3, "percentage": 58.8 },
+        "Aquaculture": { "hectares": 28.7, "percentage": 18.9 },
+        "Other": { "hectares": 21.4, "percentage": 14.1 }
+      },
+      "yearlyTrend": [
+        { "year": "2016", "area": 6742.1, "ndvi": 0.687 },
+        { "year": "2017", "area": 6758.4, "ndvi": 0.689 },
+        { "year": "2018", "area": 6771.9, "ndvi": 0.690 },
+        { "year": "2019", "area": 6789.2, "ndvi": 0.692 },
+        { "year": "2020", "area": 6802.8, "ndvi": 0.693 },
+        { "year": "2021", "area": 6825.1, "ndvi": 0.695 },
+        { "year": "2022", "area": 6843.7, "ndvi": 0.696 },
+        { "year": "2023", "area": 6861.2, "ndvi": 0.698 },
+        { "year": "2024", "area": 6879.5, "ndvi": 0.699 },
+        { "year": "2025", "area": 6898.3, "ndvi": 0.701 },
+        { "year": "2026", "area": 6918.4, "ndvi": 0.702 }
+      ]
+    },
+    "sundarbans-core": {
+      "name": "Sundarbans (Indian Delta Core)",
+      "shortName": "Sundarbans",
+      "state": "West Bengal",
+      "type": "UNESCO World Heritage Deltaic Forest",
+      "data2016": {
+        "totalHectares": 4231.7,
+        "healthyHectares": 3428.1,
+        "degradedHectares": 803.6,
+        "mangroveMeanNdvi": 0.654,
+        "healthyPct": 81.0,
+        "degradedPct": 19.0
+      },
+      "data2026": {
+        "totalHectares": 3892.5,
+        "healthyHectares": 3042.8,
+        "degradedHectares": 849.7,
+        "mangroveMeanNdvi": 0.638,
+        "healthyPct": 78.2,
+        "degradedPct": 21.8
+      },
+      "change": {
+        "areaChangeHa": -339.2,
+        "areaChangePct": -8.0,
+        "ndviChange": -0.016,
+        "healthyLostHa": -385.3,
+        "degradedGainHa": 46.1
+      },
+      "lossBreakdown": {
+        "Urban/Infrastructure": { "hectares": 30.5, "percentage": 9.0 },
+        "Erosion/Water": { "hectares": 220.5, "percentage": 65.0 },
+        "Aquaculture": { "hectares": 54.3, "percentage": 16.0 },
+        "Other": { "hectares": 33.9, "percentage": 10.0 }
+      },
+      "yearlyTrend": [
+        { "year": "2016", "area": 4231.7, "ndvi": 0.654 },
+        { "year": "2017", "area": 4210.3, "ndvi": 0.652 },
+        { "year": "2018", "area": 4192.8, "ndvi": 0.651 },
+        { "year": "2019", "area": 4168.4, "ndvi": 0.649 },
+        { "year": "2020", "area": 4139.5, "ndvi": 0.647 },
+        { "year": "2021", "area": 4108.2, "ndvi": 0.645 },
+        { "year": "2022", "area": 4072.6, "ndvi": 0.644 },
+        { "year": "2023", "area": 4035.1, "ndvi": 0.642 },
+        { "year": "2024", "area": 3982.7, "ndvi": 0.641 },
+        { "year": "2025", "area": 3938.4, "ndvi": 0.639 },
+        { "year": "2026", "area": 3892.5, "ndvi": 0.638 }
+      ]
+    }
+  },
+  "summary": {
+    "totalAreaChange2016to2026": {
+      "thane-creek": -336.7,
+      "bhitarkanika": 176.3,
+      "sundarbans-core": -339.2,
+      "netAll": -499.6
+    },
+    "overallNetChangePct": -3.8
+  },
+  "findings": [
+    {
+      "id": "f1",
+      "type": "critical",
+      "title": "Net Mangrove Loss of ~500 ha Across Study Sites",
+      "description": "Combined analysis of all three regions reveals a net loss of approximately 499.6 hectares of mangrove cover between 2016 and 2026 — an overall decline of 3.8%. Thane Creek and Sundarbans together lost ~676 ha, partially offset by Bhitarkanika's gain of 176 ha.",
+      "icon": "alert"
+    },
+    {
+      "id": "f2",
+      "type": "negative",
+      "title": "Thane Creek: Fastest Decline (−15.4%) Due to Urbanization",
+      "description": "Urban encroachment accounts for 50% of all mangrove loss in Thane Creek, the highest among all regions. Mumbai's rapid real estate expansion and infrastructure development along the creek corridor have driven a consistent year-on-year decline averaging ~34 ha/year.",
+      "icon": "trending-down"
+    },
+    {
+      "id": "f3",
+      "type": "negative",
+      "title": "Sundarbans: Erosion-Driven Loss (−8.0%)",
+      "description": "Coastal erosion and rising water levels account for 65% of mangrove loss in the Sundarbans delta. Cyclone Amphan (2020) and Yaas (2021) accelerated bank erosion, with the post-2020 decline rate doubling compared to the 2016–2020 period. Sea-level rise continues to submerge low-lying fringe mangroves.",
+      "icon": "trending-down"
+    },
+    {
+      "id": "f4",
+      "type": "positive",
+      "title": "Bhitarkanika: Only Region With Growth (+2.6%)",
+      "description": "As a protected Wildlife Sanctuary under active conservation management, Bhitarkanika is the only study area showing net mangrove gain. Afforestation drives along Brahmani-Baitarani delta channels and reduced anthropogenic pressure have resulted in 176 ha of new growth since 2016.",
+      "icon": "trending-up"
+    },
+    {
+      "id": "f5",
+      "type": "insight",
+      "title": "Protected Status Correlates With Healthier Canopy",
+      "description": "Bhitarkanika maintains the highest NDVI (0.702) and lowest degraded proportion (16.0%), suggesting that stringent Wildlife Sanctuary protections directly improve canopy vigor. In contrast, Thane Creek (unprotected urban fringe) shows the lowest NDVI (0.571) and highest degradation (29.8%).",
+      "icon": "shield"
+    },
+    {
+      "id": "f6",
+      "type": "insight",
+      "title": "Aquaculture Emerging as Third-Largest Loss Driver",
+      "description": "Across all three regions, aquaculture conversion accounts for 15–19% of mangrove loss. Shrimp pond expansion is particularly impactful in Bhitarkanika (18.9%) and Sundarbans (16.0%), threatening fringe habitats despite regulations.",
+      "icon": "info"
+    }
+  ]
+}

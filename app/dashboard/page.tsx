@@ -304,7 +304,7 @@ export default function DashboardPage() {
         ) : viewMode === "change" ? (
           <ChangeDetectionView region={region} currentYear={year} />
         ) : viewMode === "compare" ? (
-          <RegionCompareView year={year} />
+          <RegionCompareView />
         ) : (
           <>
             <div className="h-full min-w-0 w-[65%] print:w-full">
